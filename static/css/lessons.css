@@ -1,0 +1,21 @@
+div.question {
+    padding: 10px;
+}
+
+input.completed {
+    border: 1px solid rbga(0,80,0,0.8);
+    border-radius: 3px;
+    box-shadow: 0 0 6px rgba(0, 80, 0, 0.8);
+}
+
+input.incorrect {
+    border: 1px solid rbga(80,0,0,0.8);
+    border-radius: 3px;
+    box-shadow: 0 0 6px rgba(80, 0, 0, 0.8);
+}
+
+input.new-question {
+    border: 1px solid rbga(0,0,80,0.8);
+    border-radius: 3px;
+    box-shadow: 0 0 6px rgba(0, 0, 80, 0.8);
+}
