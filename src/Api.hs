@@ -86,7 +86,10 @@ createUser user = do
   return $ fromSqlKey newUser
 
 allLessons :: AppM [Lesson]
-allLessons = undefined
+allLessons = do
+  lessons <- runDb $ selectList [] []
+  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  return justLessons
 
 singleLesson :: Int64 -> AppM Lesson
 singleLesson = undefined
