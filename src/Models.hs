@@ -30,8 +30,8 @@ Lesson json
   goon String
   deriving Eq Show Generic
 LessonPrereqs json
-  lessonFor Int64
-  lessonRequired Int64
+  lessonFor LessonId
+  lessonRequired LessonId
   deriving Eq Show
 User json
   name String
@@ -39,8 +39,8 @@ User json
   UniqueUser email
   deriving Eq Show Generic
 LessonCompleted json
-  user Int64
-  lesson Int64
+  user LessonId
+  lesson LessonId
   deriving Eq Show
 |]
 
