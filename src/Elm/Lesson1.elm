@@ -135,14 +135,12 @@ view address model =
             [ Html.Attributes.class "noncompletion completion" ]
             [ Html.text "Complete all questions before moving on" ]
   in
-    Html.section
-          [ Html.Attributes.class "jumbotron lesson1" ]
-          ( [ Html.h1 [] [ Html.text "Lesson 1" ]
-            , Html.h2 [ Html.Attributes.class "keyphrase" ] [ Html.text model.phrase ]
-            ] ++ (model.questions
-                    |> List.map (viewQuestion address)
-                    |> List.take model.qAt ) ++ [ completionDiv ] )
-
+    Html.div
+          [ Html.Attributes.class "specificLesson" ]
+          ((model.questions
+              |> List.map (viewQuestion address)
+              |> List.take model.qAt ) ++ [ completionDiv ] )
+             
 -- All Together
 
 main = StartApp.Simple.start { model = init

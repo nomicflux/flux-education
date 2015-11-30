@@ -28,10 +28,10 @@ instance ToHtml Page where
         link_ [href_ $ toText "/css/bootstrap.css", type_ $ toText "text/css", rel_ $ toText "stylesheet"]
         link_ [href_ $ toText "/css/lessons.css", type_ $ toText "text/css", rel_ $ toText "stylesheet"]
       body_ $ do
-        div_ $ do
+        with section_ [class_ $ toText "jumbotron"] $ do
           h1_ (toHtml $ lessonTitle lesson)
           h2_ (toHtml $ lessonKeyphrase lesson)
-        with div_ [id_ (toText "elmApp"), class_ (toText "jumbotron")] (toHtml "")
+          with div_ [id_ (toText "elmApp")] (toHtml "")
         (script_ [] "var elmApp = document.getElementById(\"elmApp\"); Elm.embed(Elm.Lesson1, elmApp);")
   toHtmlRaw = toHtml
 

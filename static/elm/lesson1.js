@@ -3904,18 +3904,11 @@ Elm.Lesson1.make = function (_elm) {
          _L.fromArray([$Html.text("Go to Lesson 2")]))])) : A2($Html.div,
          _L.fromArray([$Html$Attributes.$class("noncompletion completion")]),
          _L.fromArray([$Html.text("Complete all questions before moving on")]));
-         return A2($Html.section,
-         _L.fromArray([$Html$Attributes.$class("jumbotron lesson1")]),
-         A2($Basics._op["++"],
-         _L.fromArray([A2($Html.h1,
-                      _L.fromArray([]),
-                      _L.fromArray([$Html.text("Lesson 1")]))
-                      ,A2($Html.h2,
-                      _L.fromArray([$Html$Attributes.$class("keyphrase")]),
-                      _L.fromArray([$Html.text(model.phrase)]))]),
+         return A2($Html.div,
+         _L.fromArray([$Html$Attributes.$class("specificLesson")]),
          A2($Basics._op["++"],
          $List.take(model.qAt)($List.map(viewQuestion(address))(model.questions)),
-         _L.fromArray([completionDiv]))));
+         _L.fromArray([completionDiv])));
       }();
    });
    var mkQuestion = F3(function (x,
