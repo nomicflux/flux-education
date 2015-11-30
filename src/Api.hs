@@ -8,7 +8,9 @@ import Control.Monad (liftM)
 import Control.Monad.Reader (ReaderT, runReaderT, lift)
 import Control.Monad.Trans.Either (EitherT, left)
 import Network.Wai (Application)
-import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, insert)
+import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
+import qualified Database.Esqueleto as E
+import           Database.Esqueleto ((^.))
 import Data.Int (Int64)
 import Servant
 
@@ -92,16 +94,45 @@ allLessons = do
   return justLessons
 
 singleLesson :: Int64 -> AppM Lesson
-singleLesson = undefined
+singleLesson key = do
+  mlesson <- runDb $ selectList [LessonId ==. (toSqlKey key)] []
+  case mlesson of
+   [] -> lift $ left err404
+   ((Entity _ x):xs) -> return x
 
 requiredLessons :: Int64 -> AppM [Lesson]
-requiredLessons = undefined
+requiredLessons key = do
+  lessons <- runDb
+             $ E.select
+             $ E.from $ \(E.InnerJoin lessonPrereqs lesson) -> do
+               E.where_ (lessonPrereqs ^. LessonPrereqsLessonFor E.==. E.val (toSqlKey key))
+               E.on $ lessonPrereqs ^. LessonPrereqsLessonRequired E.==. lesson ^. LessonId
+               return lesson
+  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  return justLessons
 
 requiredByLessons :: Int64 -> AppM [Lesson]
-requiredByLessons = undefined
+requiredByLessons key = do
+  lessons <- runDb
+             $ E.select
+             $ E.from $ \(E.InnerJoin lessonPrereqs lesson) -> do
+               E.where_ (lessonPrereqs ^. LessonPrereqsLessonRequired E.==. E.val (toSqlKey key))
+               E.on $ lessonPrereqs ^. LessonPrereqsLessonFor E.==. lesson ^. LessonId
+               return lesson
+  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  return justLessons
+
 
 completedLessons :: Int64 -> AppM [Lesson]
-completedLessons = undefined
+completedLessons key = do
+  lessons <- runDb
+             $ E.select
+             $ E.from $ \(E.InnerJoin lesson lessonCompleted) -> do
+               E.where_ $ lessonCompleted ^. LessonCompletedUser E.==. E.val (toSqlKey key)
+               E.on $ lessonCompleted ^. LessonCompletedLesson E.==. lesson ^. LessonId
+               return lesson
+  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  return justLessons
 
 createLesson :: Lesson -> AppM Int64
 createLesson lesson = do
