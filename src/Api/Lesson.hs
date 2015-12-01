@@ -20,9 +20,9 @@ lessonAPI = Proxy
 type LessonAPI =
   Get '[JSON] [Lesson]
   :<|> Capture "lesson" Int64 :> Get '[JSON] Lesson
-  :<|> "requires" :> Capture "lesson" Int64 :> Get '[JSON] [Lesson]
-  :<|> "requiredby" :> Capture "lesson" Int64 :> Get '[JSON] [Lesson]
-  :<|> "completed" :> Capture "user" Int64 :> Get '[JSON] [Lesson]
+  :<|> "requires" :> Capture "lesson" Int64 :> Get '[JSON] [(Int64, Lesson)]
+  :<|> "requiredby" :> Capture "lesson" Int64 :> Get '[JSON] [(Int64, Lesson)]
+  :<|> "completed" :> Capture "user" Int64 :> Get '[JSON] [(Int64, Lesson)]
   :<|> ReqBody '[JSON] Lesson :> Post '[JSON] Int64
 
 lessonServer :: ServerT LessonAPI AppM
@@ -46,7 +46,7 @@ singleLesson key = do
    [] -> lift $ left err404
    ((Entity _ x):xs) -> return x
 
-requiresLessons :: Int64 -> AppM [Lesson]
+requiresLessons :: Int64 -> AppM [(Int64, Lesson)]
 requiresLessons key = do
   lessons <- runDb
              $ E.select
@@ -54,10 +54,10 @@ requiresLessons key = do
                E.where_ (lessonPrereqs ^. LessonPrereqsLessonFor E.==. E.val (toSqlKey key))
                E.on $ lessonPrereqs ^. LessonPrereqsLessonRequired E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
   return justLessons
 
-requiredByLessons :: Int64 -> AppM [Lesson]
+requiredByLessons :: Int64 -> AppM [(Int64, Lesson)]
 requiredByLessons key = do
   lessons <- runDb
              $ E.select
@@ -65,10 +65,10 @@ requiredByLessons key = do
                E.where_ (lessonPrereqs ^. LessonPrereqsLessonRequired E.==. E.val (toSqlKey key))
                E.on $ lessonPrereqs ^. LessonPrereqsLessonFor E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
   return justLessons
 
-completedLessons :: Int64 -> AppM [Lesson]
+completedLessons :: Int64 -> AppM [(Int64, Lesson)]
 completedLessons key = do
   lessons <- runDb
              $ E.select
@@ -76,7 +76,7 @@ completedLessons key = do
                E.where_ $ lessonCompleted ^. LessonCompletedUser E.==. E.val (toSqlKey key)
                E.on $ lessonCompleted ^. LessonCompletedLesson E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity _ x) -> x) lessons
+  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
   return justLessons
 
 createLesson :: Lesson -> AppM Int64
