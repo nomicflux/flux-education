@@ -1,6 +1,7 @@
 dist
 cabal-dev
 *.elmo
+*.elmi
 *.o
 *.hi
 *.chi

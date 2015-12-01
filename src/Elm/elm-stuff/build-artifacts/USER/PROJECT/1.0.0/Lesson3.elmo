@@ -10,6 +10,7 @@ Elm.Lesson3.make = function (_elm) {
    _L = _N.List.make(_elm),
    $moduleName = "Lesson3",
    $Basics = Elm.Basics.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
    $Html = Elm.Html.make(_elm),
    $Html$Attributes = Elm.Html.Attributes.make(_elm),
    $Html$Events = Elm.Html.Events.make(_elm),
@@ -17,50 +18,78 @@ Elm.Lesson3.make = function (_elm) {
    $Maybe = Elm.Maybe.make(_elm),
    $Result = Elm.Result.make(_elm),
    $Signal = Elm.Signal.make(_elm),
-   $StartApp$Simple = Elm.StartApp.Simple.make(_elm),
-   $String = Elm.String.make(_elm);
+   $StartApp = Elm.StartApp.make(_elm),
+   $String = Elm.String.make(_elm),
+   $Task = Elm.Task.make(_elm);
    var completionClass = function (question) {
       return question.completed ? $Html$Attributes.$class("completed") : question.attempted ? $Html$Attributes.$class("incorrect") : $Html$Attributes.$class("new-question");
    };
-   var update = F2(function (_v0,
+   var updateQuestion = F3(function (id,
+   val,
+   question) {
+      return _U.eq(question.id,
+      id) ? function () {
+         var completed = _U.eq(question.num1 + val,
+         question.num2);
+         return _U.replace([["attempted"
+                            ,true]
+                           ,["completed",completed]],
+         question);
+      }() : question;
+   });
+   var completed = $Signal.mailbox(false);
+   var signalCompletion = Elm.Native.Port.make(_elm).outboundSignal("signalCompletion",
+   function (v) {
+      return v;
+   },
+   completed.signal);
+   var SendCompletion = {ctor: "SendCompletion"};
+   var update = F2(function (action,
    model) {
       return function () {
-         switch (_v0.ctor)
-         {case "Submission":
+         switch (action.ctor)
+         {case "SendCompletion":
+            return {ctor: "_Tuple2"
+                   ,_0: _U.replace([["completed"
+                                    ,true]],
+                   model)
+                   ,_1: $Effects.none};
+            case "Submission":
             return function () {
-                 switch (_v0._1.ctor)
+                 switch (action._1.ctor)
                  {case "Just":
                     return function () {
-                         var updateQuestion = function (question) {
-                            return _U.eq(question.id,
-                            _v0._0) ? function () {
-                               var completed = _U.eq(question.num1 + _v0._1._0,
-                               question.num2);
-                               return _U.replace([["attempted"
-                                                  ,true]
-                                                 ,["completed",completed]],
-                               question);
-                            }() : question;
-                         };
                          var updatedQuestions = A2($List.map,
-                         updateQuestion,
+                         A2(updateQuestion,
+                         action._0,
+                         action._1._0),
                          model.questions);
                          var newestCompletion = $Maybe.withDefault(0)($List.maximum($List.map(function (_) {
                             return _.id;
                          })($List.filter(function (_) {
                             return _.completed;
                          })(updatedQuestions))));
-                         return _U.replace([["questions"
-                                            ,updatedQuestions]
-                                           ,["qAt",newestCompletion + 1]],
-                         model);
+                         var completion = _U.cmp(newestCompletion + 1,
+                         $List.length(model.questions)) > 0;
+                         var completionAction = completion ? $Effects.task($Task.map($Basics.always(SendCompletion))(A2($Signal.send,
+                         completed.address,
+                         true))) : $Effects.none;
+                         return {ctor: "_Tuple2"
+                                ,_0: _U.replace([["questions"
+                                                 ,updatedQuestions]
+                                                ,["qAt",newestCompletion + 1]],
+                                model)
+                                ,_1: completionAction};
                       }();
-                    case "Nothing": return model;}
+                    case "Nothing":
+                    return {ctor: "_Tuple2"
+                           ,_0: model
+                           ,_1: $Effects.none};}
                  _U.badCase($moduleName,
-                 "between lines 54 and 77");
+                 "between lines 77 and 99");
               }();}
          _U.badCase($moduleName,
-         "between lines 54 and 77");
+         "between lines 74 and 99");
       }();
    });
    var Submission = F2(function (a,
@@ -104,20 +133,9 @@ Elm.Lesson3.make = function (_elm) {
    });
    var view = F2(function (address,
    model) {
-      return function () {
-         var completion = _U.cmp(model.qAt,
-         $List.length(model.questions)) > 0;
-         var completionDiv = completion ? A2($Html.div,
-         _L.fromArray([$Html$Attributes.$class("completion")]),
-         _L.fromArray([A2($Html.a,
-         _L.fromArray([$Html$Attributes.href("Lesson4.html")]),
-         _L.fromArray([$Html.text("Go to Lesson 4")]))])) : A2($Html.div,
-         _L.fromArray([$Html$Attributes.$class("noncompletion completion")]),
-         _L.fromArray([$Html.text("Complete all questions before moving on")]));
-         return A2($Html.div,
-         _L.fromArray([$Html$Attributes.$class("specificLesson")]),
-         $List.take(model.qAt)($List.map(viewQuestion(address))(model.questions)));
-      }();
+      return A2($Html.div,
+      _L.fromArray([$Html$Attributes.$class("specificLesson")]),
+      $List.take(model.qAt)($List.map(viewQuestion(address))(model.questions)));
    });
    var mkQuestion = F3(function (x,
    y,
@@ -130,7 +148,7 @@ Elm.Lesson3.make = function (_elm) {
              ,num2: y};
    });
    var init = {_: {}
-              ,phrase: "Sometimes we have the answer and need the question."
+              ,completed: false
               ,qAt: 1
               ,questions: _L.fromArray([A3(mkQuestion,
                                        2,
@@ -138,10 +156,16 @@ Elm.Lesson3.make = function (_elm) {
                                        1)
                                        ,A3(mkQuestion,5,12,2)
                                        ,A3(mkQuestion,40,42,3)])};
-   var main = $StartApp$Simple.start({_: {}
-                                     ,model: init
-                                     ,update: update
-                                     ,view: view});
+   var app = $StartApp.start({_: {}
+                             ,init: {ctor: "_Tuple2"
+                                    ,_0: init
+                                    ,_1: $Effects.none}
+                             ,inputs: _L.fromArray([])
+                             ,update: update
+                             ,view: view});
+   var tasks = Elm.Native.Task.make(_elm).performSignal("tasks",
+   app.tasks);
+   var main = app.html;
    var Question = F5(function (a,
    b,
    c,
@@ -158,9 +182,9 @@ Elm.Lesson3.make = function (_elm) {
    b,
    c) {
       return {_: {}
-             ,phrase: a
-             ,qAt: c
-             ,questions: b};
+             ,completed: c
+             ,qAt: b
+             ,questions: a};
    });
    _elm.Lesson3.values = {_op: _op
                          ,Model: Model
@@ -168,11 +192,15 @@ Elm.Lesson3.make = function (_elm) {
                          ,mkQuestion: mkQuestion
                          ,init: init
                          ,Submission: Submission
+                         ,SendCompletion: SendCompletion
+                         ,completed: completed
+                         ,updateQuestion: updateQuestion
                          ,update: update
                          ,targetToSubmission: targetToSubmission
                          ,completionClass: completionClass
                          ,viewQuestion: viewQuestion
                          ,view: view
+                         ,app: app
                          ,main: main};
    return _elm.Lesson3.values;
 };

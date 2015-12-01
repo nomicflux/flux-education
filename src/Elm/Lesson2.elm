@@ -8,16 +8,18 @@ import String
 import Html exposing (Html, Attribute)
 import Html.Attributes
 import Html.Events
-import StartApp.Simple
+import StartApp
+import Effects exposing (Effects, Never)
+import Task exposing (Task, andThen)
 
 -- Model
 
 type alias ID = Int
 
 type alias Model =
-  { phrase : String
-  , questions : List Question
+  { questions : List Question
   , qAt : ID
+  , completed : Bool
   }
 
 type alias Question =
@@ -37,44 +39,65 @@ mkQuestion x y id = { num1 = x
                        }
 
 init : Model
-init = { phrase = "An X doesn't change anything."
-        , questions = [ mkQuestion 2 3 1 
+init = { questions = [ mkQuestion 2 3 1 
                       , mkQuestion 5 7 2
                       , mkQuestion 40 2 3
                       ]
         , qAt = 1
+        , completed = False
         }
 
 -- Update
 
 type Action = Submission ID (Maybe Int)
+            | SendCompletion
 
-update : Action -> Model -> Model
-update (Submission id mval) model =
-  case mval of
-    Nothing -> model
-    Just val ->
-      let
-        updateQuestion : Question -> Question
-        updateQuestion question =
-          if question.id == id
-          then
-            let
-              completed = question.num1 + question.num2 == val
-            in
-              { question | attempted <- True, completed <- completed }
-          else
-            question
+port signalCompletion : Signal Bool
+port signalCompletion = completed.signal
+
+completed : Signal.Mailbox Bool
+completed = Signal.mailbox False
+
+updateQuestion : ID -> Int -> Question -> Question
+updateQuestion id val question =
+  if question.id == id
+  then
+    let
+      completed = question.num1 + question.num2 == val
+    in
+      { question | attempted <- True, completed <- completed }
+  else
+    question
             
-        updatedQuestions = List.map updateQuestion model.questions
-
-        newestCompletion = updatedQuestions
+update : Action -> Model -> (Model, Effects Action)
+update action model =
+  case action of
+    SendCompletion -> ({model | completed <- True}, Effects.none)
+    Submission id mval ->
+      case mval of
+        Nothing -> (model, Effects.none)
+        Just val ->
+          let
+            updatedQuestions = List.map (updateQuestion id val) model.questions
+                               
+            newestCompletion = updatedQuestions
                              |> List.filter (.completed)
                              |> List.map (.id)
                              |> List.maximum
                              |> Maybe.withDefault 0
+
+            completion = newestCompletion + 1 > List.length model.questions
+
+            completionAction = if completion
+                               then
+                                 Signal.send completed.address True
+                                   |> Task.map (always SendCompletion)
+                                   |> Effects.task
+                               else Effects.none
       in
-        { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+        ( { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+        , completionAction
+        )
 
 -- View
 
@@ -122,31 +145,21 @@ viewQuestion address question =
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-  let
-    completion = model.qAt > List.length model.questions
-    completionDiv =
-      if completion
-      then
-        Html.div
-              [ Html.Attributes.class "completion" ]
-              [ Html.a
-                      [ Html.Attributes.href "Lesson3.html" ]
-                      [ Html.text "Go to Lesson 3" ]
-              ]
-      else
-        Html.div
-            [ Html.Attributes.class "noncompletion completion" ]
-            [ Html.text "Complete all questions before moving on" ]
-  in
-    Html.div
+  Html.div
         [ Html.Attributes.class "specificLesson"]
         (model.questions
            |> List.map (viewQuestion address)
            |> List.take model.qAt ) 
 
 -- All Together
+app = StartApp.start
+      { init = (init, Effects.none)
+      , update = update
+      , view   = view
+      , inputs = []
+      }
 
-main = StartApp.Simple.start { model = init
-                             , update = update
-                             , view   = view
-                             }
+port tasks : Signal (Task Never ())
+port tasks = app.tasks
+
+main = app.html

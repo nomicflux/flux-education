@@ -1,5 +1,25 @@
+div.hidden {
+    display: none;
+}
+
+ul {
+    list-style-type: none;
+}
+
 div.question {
     padding: 10px;
+}
+
+button.completed {
+    color: green;
+}
+
+button.incorrect {
+    color: red;
+}
+
+button.new-question {
+    color: blue;
 }
 
 input.completed {

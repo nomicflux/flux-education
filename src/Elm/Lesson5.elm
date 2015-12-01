@@ -8,7 +8,9 @@ import String
 import Html exposing (Html, Attribute)
 import Html.Attributes
 import Html.Events
-import StartApp.Simple
+import StartApp
+import Effects exposing (Effects, Never)
+import Task exposing (Task, andThen)
 
 -- Model
 
@@ -22,9 +24,9 @@ type alias InputBox =
   }
                    
 type alias Model =
-  { phrase : String
-  , questions : List Question
+  { questions : List Question
   , qAt : QuestionID
+  , completed : Bool
   }
 
 type alias Question =
@@ -51,17 +53,24 @@ mkQuestion x y z id = { num11 = x
                          }
 
 init : Model
-init = { phrase = "Some questions must be answered together."
-        , questions = [ mkQuestion 2 3 9 1 
+init = { questions = [ mkQuestion 2 3 9 1 
                       , mkQuestion 5 7 21 2
                       , mkQuestion 40 1 42 3
                       ]
         , qAt = 1
+        , completed = False
         }
 
 -- Update
 
 type Action = Submission QuestionID BoxID (Maybe Int)
+            | SendCompletion
+
+port signalCompletion : Signal Bool
+port signalCompletion = completed.signal
+
+completed : Signal.Mailbox Bool
+completed = Signal.mailbox False
 
 updateBox : BoxID -> Bool -> ( BoxID, InputBox ) -> ( BoxID, InputBox )
 updateBox wantedBid completion (thisBid, box) =
@@ -95,18 +104,30 @@ findLatestAnswered qs = qs
                       |> List.maximum
                       |> Maybe.withDefault 0
 
-update : Action -> Model -> Model
+update : Action -> Model -> (Model, Effects Action)
 update action model =
     case action of
+      SendCompletion -> ({model | completed <- True}, Effects.none)
       Submission qid bid mval ->
         case mval of
-          Nothing -> model
+          Nothing -> (model, Effects.none)
           Just val ->
               let
                 updatedQuestions = List.map (updateQuestion val ( qid, bid )) model.questions
                 newestCompletion = findLatestAnswered updatedQuestions
+
+                completion = newestCompletion + 1 > List.length model.questions
+
+                completionAction = if completion
+                                   then
+                                     Signal.send completed.address True
+                                       |> Task.map (always SendCompletion)
+                                       |> Effects.task
+                                   else Effects.none
               in
-                { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+                ( { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+                , completionAction
+                )
 
 -- View
 
@@ -174,31 +195,22 @@ viewQuestion address question =
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-  let
-    completion = model.qAt > List.length model.questions
-    completionDiv =
-      if completion
-      then
-        Html.div
-              [ Html.Attributes.class "completion" ]
-              [ Html.a
-                      [ Html.Attributes.href "Lesson6.html" ]
-                      [ Html.text "Go to Lesson 6" ]
-              ]
-      else
-        Html.div
-            [ Html.Attributes.class "noncompletion completion" ]
-            [ Html.text "Complete all questions before moving on" ]
-  in
-    Html.div
-          [ Html.Attributes.class "specificLesson" ]
-          (model.questions
-             |> List.map (viewQuestion address)
-             |> List.take model.qAt )
+  Html.div
+        [ Html.Attributes.class "specificLesson" ]
+        (model.questions
+           |> List.map (viewQuestion address)
+           |> List.take model.qAt )
 
 -- All Together
 
-main = StartApp.Simple.start { model = init
-                             , update = update
-                             , view   = view
-                             }
+app = StartApp.start
+      { init = (init, Effects.none)
+      , update = update
+      , view   = view
+      , inputs = []
+      }
+
+port tasks : Signal (Task Never ())
+port tasks = app.tasks
+
+main = app.html

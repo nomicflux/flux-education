@@ -3,18 +3,15 @@
 
 module Api where
 
-import Control.Monad (liftM)
-import Control.Monad.Reader (ReaderT, runReaderT, lift)
-import Control.Monad.Trans.Either (EitherT, left)
+import Control.Monad.Reader (runReaderT)
+import Control.Monad.Trans.Either (EitherT)
 import Network.Wai (Application)
-import Network.HTTP.Types
-import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
-import Data.Int (Int64)
+--import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
+--import Data.Int (Int64)
 import Servant
-import Servant.Docs
 
 import Config (Config(..))
-import Models
+--import Models
 import Api.User
 import Api.Lesson
 import Api.App
