@@ -3906,9 +3906,7 @@ Elm.Lesson1.make = function (_elm) {
          _L.fromArray([$Html.text("Complete all questions before moving on")]));
          return A2($Html.div,
          _L.fromArray([$Html$Attributes.$class("specificLesson")]),
-         A2($Basics._op["++"],
-         $List.take(model.qAt)($List.map(viewQuestion(address))(model.questions)),
-         _L.fromArray([completionDiv])));
+         $List.take(model.qAt)($List.map(viewQuestion(address))(model.questions)));
       }();
    });
    var mkQuestion = F3(function (x,

@@ -137,9 +137,9 @@ view address model =
   in
     Html.div
           [ Html.Attributes.class "specificLesson" ]
-          ((model.questions
-              |> List.map (viewQuestion address)
-              |> List.take model.qAt ) ++ [ completionDiv ] )
+          (model.questions
+             |> List.map (viewQuestion address)
+             |> List.take model.qAt )
              
 -- All Together
 
