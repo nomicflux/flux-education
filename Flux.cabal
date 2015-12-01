@@ -21,6 +21,7 @@ executable Flux
                      , Models
                      , Api
   other-extensions:    DataKinds, TypeOperators, TemplateHaskell, QuasiQuotes, EmptyDataDecls, FlexibleContexts, FlexibleInstances, GADTs, GeneralizedNewtypeDeriving, MultiParamTypeClasses, OverloadedStrings, TypeFamilies, RecordWildCards, DeriveGeneric
+  ghc-options:         -Wall -fwarn-tabs
   
   build-depends:       base >=4.7 && <4.8
                      , mtl >=2.1 && <2.2
