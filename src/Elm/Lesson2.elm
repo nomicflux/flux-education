@@ -108,18 +108,30 @@ targetToSubmission address id val =
   in
     Signal.message address (Submission id mNumVal)
 
-completionClass : Question -> Attribute
+completionClass : Question -> String
 completionClass question =
   if question.completed
   then
-    Html.Attributes.class "completed"
+    "completed"
   else
     if question.attempted
     then
-      Html.Attributes.class "incorrect"
+      "incorrect"
     else
-      Html.Attributes.class "new-question"
-    
+      "new-question"
+
+faClass : Question -> String
+faClass question =
+  if question.completed
+  then
+    "fa fa-check-square-o"
+  else
+    if question.attempted
+    then
+      "fa fa-square-o"
+    else
+      "fa fa-square-o"
+      
 viewQuestion : Signal.Address Action -> Question -> Html
 viewQuestion address question =
   Html.div
@@ -136,10 +148,16 @@ viewQuestion address question =
             [ Html.text "x  = "
             , Html.input
               [ Html.Attributes.type' "text"
-              , completionClass question
+              , completionClass question |> Html.Attributes.class
               , Html.Events.on "change" (Html.Events.targetValue) (targetToSubmission address question.id)
-              ]
+              ]              
               [ ]
+            , Html.button
+                    [ "btn btn-side " ++ completionClass question |> Html.Attributes.class ]
+                    [ Html.node "i"
+                            [ Html.Attributes.class (faClass question) ]
+                            [ ]
+                    ]
             ]
       ]
 

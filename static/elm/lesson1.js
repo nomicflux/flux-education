@@ -3945,6 +3945,9 @@ Elm.Lesson1.make = function (_elm) {
    $StartApp = Elm.StartApp.make(_elm),
    $String = Elm.String.make(_elm),
    $Task = Elm.Task.make(_elm);
+   var faClass = function (question) {
+      return question.completed ? "fa fa-check-square-o" : question.attempted ? "fa fa-square-o" : "fa fa-square-o";
+   };
    var completionClass = function (question) {
       return question.completed ? "completed" : question.attempted ? "incorrect" : "new-question";
    };
@@ -4064,11 +4067,11 @@ Elm.Lesson1.make = function (_elm) {
                    _L.fromArray([]))
                    ,A2($Html.button,
                    _L.fromArray([$Html$Attributes.$class(A2($Basics._op["++"],
-                   "btn ",
+                   "btn btn-side ",
                    completionClass(question)))]),
                    _L.fromArray([A3($Html.node,
                    "i",
-                   _L.fromArray([$Html$Attributes.$class("fa fa-check-square-o")]),
+                   _L.fromArray([$Html$Attributes.$class(faClass(question))]),
                    _L.fromArray([]))]))]))]));
    });
    var view = F2(function (address,
@@ -4140,6 +4143,7 @@ Elm.Lesson1.make = function (_elm) {
                          ,taskToNone: taskToNone
                          ,targetToSubmission: targetToSubmission
                          ,completionClass: completionClass
+                         ,faClass: faClass
                          ,viewQuestion: viewQuestion
                          ,view: view
                          ,app: app

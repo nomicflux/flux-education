@@ -21,7 +21,7 @@ Elm.Lesson5.make = function (_elm) {
    $StartApp = Elm.StartApp.make(_elm),
    $String = Elm.String.make(_elm),
    $Task = Elm.Task.make(_elm);
-   var completionClass = F2(function (question,
+   var faClass = F2(function (question,
    bid) {
       return function () {
          var mbox = $List.head(A2($List.filter,
@@ -30,6 +30,33 @@ Elm.Lesson5.make = function (_elm) {
                switch (_v0.ctor)
                {case "_Tuple2":
                   return _U.eq(_v0._0,bid);}
+               _U.badCase($moduleName,
+               "on line 162, column 49 to 58");
+            }();
+         },
+         question.boxes));
+         return function () {
+            switch (mbox.ctor)
+            {case "Just":
+               switch (mbox._0.ctor)
+                 {case "_Tuple2":
+                    return mbox._0._1.completed ? "fa fa-check-square-o" : mbox._0._1.attempted ? "fa fa-square-o" : "fa fa-square-o";}
+                 break;
+               case "Nothing": return "";}
+            _U.badCase($moduleName,
+            "between lines 164 and 177");
+         }();
+      }();
+   });
+   var completionClass = F2(function (question,
+   bid) {
+      return function () {
+         var mbox = $List.head(A2($List.filter,
+         function (_v8) {
+            return function () {
+               switch (_v8.ctor)
+               {case "_Tuple2":
+                  return _U.eq(_v8._0,bid);}
                _U.badCase($moduleName,
                "on line 144, column 49 to 58");
             }();
@@ -40,12 +67,11 @@ Elm.Lesson5.make = function (_elm) {
             {case "Just":
                switch (mbox._0.ctor)
                  {case "_Tuple2":
-                    return mbox._0._1.completed ? $Html$Attributes.$class("completed") : mbox._0._1.attempted ? $Html$Attributes.$class("incorrect") : $Html$Attributes.$class("new-question");}
+                    return mbox._0._1.completed ? "completed" : mbox._0._1.attempted ? "incorrect" : "new-question";}
                  break;
-               case "Nothing":
-               return $Html$Attributes.$class("none");}
+               case "Nothing": return "";}
             _U.badCase($moduleName,
-            "between lines 146 and 158");
+            "between lines 146 and 157");
          }();
       }();
    });
@@ -61,11 +87,11 @@ Elm.Lesson5.make = function (_elm) {
    });
    var boxesComplete = function (q) {
       return A2($List.all,
-      function (_v8) {
+      function (_v16) {
          return function () {
-            switch (_v8.ctor)
+            switch (_v16.ctor)
             {case "_Tuple2":
-               return _v8._1.completed;}
+               return _v16._1.completed;}
             _U.badCase($moduleName,
             "on line 98, column 41 to 52");
          }();
@@ -79,37 +105,37 @@ Elm.Lesson5.make = function (_elm) {
    };
    var updateBox = F3(function (wantedBid,
    completion,
-   _v12) {
+   _v20) {
       return function () {
-         switch (_v12.ctor)
+         switch (_v20.ctor)
          {case "_Tuple2":
-            return _U.eq(_v12._0,
+            return _U.eq(_v20._0,
               wantedBid) ? {ctor: "_Tuple2"
-                           ,_0: _v12._0
+                           ,_0: _v20._0
                            ,_1: _U.replace([["attempted"
                                             ,true]
                                            ,["completed",completion]],
-                           _v12._1)} : {ctor: "_Tuple2"
-                                       ,_0: _v12._0
-                                       ,_1: _v12._1};}
+                           _v20._1)} : {ctor: "_Tuple2"
+                                       ,_0: _v20._0
+                                       ,_1: _v20._1};}
          _U.badCase($moduleName,
          "between lines 77 and 81");
       }();
    });
    var updateQuestion = F3(function (val,
-   _v16,
+   _v24,
    question) {
       return function () {
-         switch (_v16.ctor)
+         switch (_v24.ctor)
          {case "_Tuple2":
             return _U.eq(question.id,
-              _v16._0) ? function () {
+              _v24._0) ? function () {
                  var completionVals = _L.fromArray([_U.eq(question.num11 + question.num12,
                                                    val)
                                                    ,_U.eq(question.num22 - question.num11 - question.num12,
                                                    val)]);
                  var updatedBoxes = A3($List.map2,
-                 updateBox(_v16._1),
+                 updateBox(_v24._1),
                  completionVals,
                  question.boxes);
                  return _U.replace([["boxes"
@@ -210,7 +236,9 @@ Elm.Lesson5.make = function (_elm) {
                                 _L.fromArray([$Html.text("x = ")]))
                                 ,A2($Html.input,
                                 _L.fromArray([$Html$Attributes.type$("text")
-                                             ,A2(completionClass,question,1)
+                                             ,$Html$Attributes.$class(A2(completionClass,
+                                             question,
+                                             1))
                                              ,A3($Html$Events.on,
                                              "change",
                                              $Html$Events.targetValue,
@@ -222,7 +250,19 @@ Elm.Lesson5.make = function (_elm) {
                                                 1,
                                                 x);
                                              }))]),
-                                _L.fromArray([]))]))
+                                _L.fromArray([]))
+                                ,A2($Html.button,
+                                _L.fromArray([$Html$Attributes.$class(A2($Basics._op["++"],
+                                "btn btn-side ",
+                                A2(completionClass,
+                                question,
+                                1)))]),
+                                _L.fromArray([A3($Html.node,
+                                "i",
+                                _L.fromArray([$Html$Attributes.$class(A2(faClass,
+                                question,
+                                1))]),
+                                _L.fromArray([]))]))]))
                    ,A2($Html.div,
                    _L.fromArray([]),
                    _L.fromArray([A2($Html.math,
@@ -230,7 +270,9 @@ Elm.Lesson5.make = function (_elm) {
                                 _L.fromArray([$Html.text("y = ")]))
                                 ,A2($Html.input,
                                 _L.fromArray([$Html$Attributes.type$("text")
-                                             ,A2(completionClass,question,2)
+                                             ,$Html$Attributes.$class(A2(completionClass,
+                                             question,
+                                             2))
                                              ,A3($Html$Events.on,
                                              "change",
                                              $Html$Events.targetValue,
@@ -242,7 +284,19 @@ Elm.Lesson5.make = function (_elm) {
                                                 2,
                                                 y);
                                              }))]),
-                                _L.fromArray([]))]))]));
+                                _L.fromArray([]))
+                                ,A2($Html.button,
+                                _L.fromArray([$Html$Attributes.$class(A2($Basics._op["++"],
+                                "btn btn-side btn-inverse ",
+                                A2(completionClass,
+                                question,
+                                2)))]),
+                                _L.fromArray([A3($Html.node,
+                                "i",
+                                _L.fromArray([$Html$Attributes.$class(A2(faClass,
+                                question,
+                                2))]),
+                                _L.fromArray([]))]))]))]));
    });
    var view = F2(function (address,
    model) {
@@ -332,6 +386,7 @@ Elm.Lesson5.make = function (_elm) {
                          ,update: update
                          ,targetToSubmission: targetToSubmission
                          ,completionClass: completionClass
+                         ,faClass: faClass
                          ,viewQuestion: viewQuestion
                          ,view: view
                          ,app: app

@@ -11,6 +11,9 @@ import Html.Events
 import StartApp
 import Effects exposing (Effects, Never)
 import Task exposing (Task, andThen)
+import Color exposing (..)
+import Graphics.Element exposing (..)
+import Graphics.Collage exposing (..)
 
 -- Model
 
@@ -123,7 +126,27 @@ completionClass question =
       "incorrect"
     else
       "new-question"
-    
+
+faClass : Question -> String
+faClass question =
+  if question.completed
+  then
+    "fa fa-check-square-o"
+  else
+    if question.attempted
+    then
+      "fa fa-square-o"
+    else
+      "fa fa-square-o"
+
+type alias NumberLineInfo =
+  { amount : Int
+  , color  : Color
+  }
+      
+makeBar : List NumberLineInfo -> Html
+makeBar 
+      
 viewQuestion : Signal.Address Action -> Question -> Html
 viewQuestion address question =
   Html.div
@@ -141,9 +164,9 @@ viewQuestion address question =
               ]
               [ ]
             , Html.button
-                  [ "btn " ++ completionClass question |> Html.Attributes.class ]
+                  [ "btn btn-side " ++ completionClass question |> Html.Attributes.class ]
                   [ Html.node "i"
-                          [ Html.Attributes.class "fa fa-check-square-o" ]
+                          [ Html.Attributes.class (faClass question) ]
                           [ ]
                   ]
             ]

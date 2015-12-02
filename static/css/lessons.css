@@ -10,15 +10,23 @@ div.question {
     padding: 10px;
 }
 
-button.completed {
+button.btn-side {
+    margin-left: 10px;
+}
+
+button.btn-below {
+    margin-top: 10px;
+}
+
+button.completed, button.completed:hover, button.completed:focus {
     color: green;
 }
 
-button.incorrect {
+button.incorrect, button.incorrect:hover, button.incorrect:focus {
     color: red;
 }
 
-button.new-question {
+button.new-question, button.new-question:hover, button.new-question:focus {
     color: blue;
 }
 

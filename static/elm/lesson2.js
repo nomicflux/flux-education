@@ -3945,8 +3945,11 @@ Elm.Lesson2.make = function (_elm) {
    $StartApp = Elm.StartApp.make(_elm),
    $String = Elm.String.make(_elm),
    $Task = Elm.Task.make(_elm);
+   var faClass = function (question) {
+      return question.completed ? "fa fa-check-square-o" : question.attempted ? "fa fa-square-o" : "fa fa-square-o";
+   };
    var completionClass = function (question) {
-      return question.completed ? $Html$Attributes.$class("completed") : question.attempted ? $Html$Attributes.$class("incorrect") : $Html$Attributes.$class("new-question");
+      return question.completed ? "completed" : question.attempted ? "incorrect" : "new-question";
    };
    var updateQuestion = F3(function (id,
    val,
@@ -4047,14 +4050,22 @@ Elm.Lesson2.make = function (_elm) {
                    _L.fromArray([$Html.text("x  = ")
                                 ,A2($Html.input,
                                 _L.fromArray([$Html$Attributes.type$("text")
-                                             ,completionClass(question)
+                                             ,$Html$Attributes.$class(completionClass(question))
                                              ,A3($Html$Events.on,
                                              "change",
                                              $Html$Events.targetValue,
                                              A2(targetToSubmission,
                                              address,
                                              question.id))]),
-                                _L.fromArray([]))]))]));
+                                _L.fromArray([]))
+                                ,A2($Html.button,
+                                _L.fromArray([$Html$Attributes.$class(A2($Basics._op["++"],
+                                "btn btn-side ",
+                                completionClass(question)))]),
+                                _L.fromArray([A3($Html.node,
+                                "i",
+                                _L.fromArray([$Html$Attributes.$class(faClass(question))]),
+                                _L.fromArray([]))]))]))]));
    });
    var view = F2(function (address,
    model) {
@@ -4123,6 +4134,7 @@ Elm.Lesson2.make = function (_elm) {
                          ,update: update
                          ,targetToSubmission: targetToSubmission
                          ,completionClass: completionClass
+                         ,faClass: faClass
                          ,viewQuestion: viewQuestion
                          ,view: view
                          ,app: app

@@ -138,23 +138,42 @@ targetToSubmission address f val =
   in
     Signal.message address (f mNumVal)
 
-completionClass : Question -> BoxID -> Attribute
+completionClass : Question -> BoxID -> String
 completionClass question bid =
   let
     mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
   in
     case mbox of
-      Nothing -> Html.Attributes.class "none"
+      Nothing -> ""
       Just (_, box) ->
         if box.completed
         then
-          Html.Attributes.class "completed"
+          "completed"
         else
           if box.attempted
           then
-            Html.Attributes.class "incorrect"
+            "incorrect"
           else
-            Html.Attributes.class "new-question"
+            "new-question"
+
+faClass : Question -> BoxID -> String
+faClass question bid =
+  let
+    mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
+  in
+    case mbox of
+      Nothing -> ""
+      Just (_, box) ->
+        if box.completed
+        then
+          "fa fa-check-square-o"
+        else
+          if box.attempted
+          then
+            "fa fa-square-o"
+          else
+            "fa fa-square-o"
+
     
 viewQuestion : Signal.Address Action -> Question -> Html
 viewQuestion address question =
@@ -173,24 +192,35 @@ viewQuestion address question =
             [ Html.math [] [ Html.text "x = " ]
             , Html.input
               [ Html.Attributes.type' "text"
-              , completionClass question 1
+              , completionClass question 1 |> Html.Attributes.class
               , Html.Events.on "change" (Html.Events.targetValue)
                       (targetToSubmission address (\x -> Submission question.id 1 x))
               ]
               [ ]
+            , Html.button
+                    [ "btn btn-side " ++ completionClass question 1 |> Html.Attributes.class ]
+                    [ Html.node "i"
+                            [ Html.Attributes.class (faClass question 1) ]
+                            [ ]
+                    ]
             ]
       , Html.div
             []
             [ Html.math [] [ Html.text "y = " ]
             , Html.input
               [ Html.Attributes.type' "text"
-              , completionClass question 2
+              , completionClass question 2 |> Html.Attributes.class
               , Html.Events.on "change" (Html.Events.targetValue)
                       (targetToSubmission address (\y -> Submission question.id 2 y))
               ]
               [ ]
+            , Html.button
+                    [ "btn btn-side btn-inverse " ++ completionClass question 2 |> Html.Attributes.class ]
+                    [ Html.node "i"
+                      [ Html.Attributes.class (faClass question 2) ]
+                      [ ]
+                    ]
             ]
-
       ]
 
 view : Signal.Address Action -> Model -> Html
