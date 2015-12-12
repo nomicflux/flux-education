@@ -1,3 +1,6 @@
+div {
+}
+
 div.hidden {
     display: none;
 }
@@ -6,8 +9,37 @@ ul {
     list-style-type: none;
 }
 
+div.keyphrase {
+}
+
 div.question {
+    display: block;
     padding: 10px;
+}
+
+div.question span {
+    display: block;
+}
+
+.blanks {
+    display: inline-block;
+    position: relative;
+    text-align: left;
+    left: 0;
+}
+
+.bars {
+    display: inline-block;
+    text-align: right;
+    position: relative;
+    right: 0;
+    top: 1.5em;
+    padding: 10px;
+}
+
+div.completion-div {
+    position: relative;
+    display: block;
 }
 
 button.btn-side {

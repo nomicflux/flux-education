@@ -4,13 +4,15 @@ import Signal exposing (Signal)
 import List
 import Maybe exposing (Maybe)
 import Result
-import String 
+import String
 import Html exposing (Html, Attribute)
 import Html.Attributes
 import Html.Events
 import StartApp
 import Effects exposing (Effects, Never)
 import Task exposing (Task, andThen)
+import NumberLine exposing (..)
+import Color exposing (..)
 
 -- Model
 
@@ -27,19 +29,21 @@ type alias Question =
   , num2 : Int
   , attempted : Bool
   , completed : Bool
-  , id : ID         
+  , guess : Maybe Int
+  , id : ID
   }
 
 mkQuestion : Int -> Int -> ID -> Question
 mkQuestion x y id = { num1 = x
-                       , num2 = y
-                       , attempted = False
-                       , completed = False
-                       , id = id
-                       }
+                    , num2 = y
+                    , attempted = False
+                    , completed = False
+                    , guess = Nothing
+                    , id = id
+                    }
 
 init : Model
-init = { questions = [ mkQuestion 2 3 1 
+init = { questions = [ mkQuestion 2 3 1
                       , mkQuestion 5 7 2
                       , mkQuestion 40 2 3
                       ]
@@ -65,21 +69,21 @@ updateQuestion id val question =
     let
       completed = question.num1 + question.num2 == val
     in
-      { question | attempted <- True, completed <- completed }
+      { question | attempted = True, completed = completed, guess = Just val }
   else
     question
-            
+
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    SendCompletion -> ({model | completed <- True}, Effects.none)
+    SendCompletion -> ({model | completed = True}, Effects.none)
     Submission id mval ->
       case mval of
         Nothing -> (model, Effects.none)
         Just val ->
           let
             updatedQuestions = List.map (updateQuestion id val) model.questions
-                               
+
             newestCompletion = updatedQuestions
                              |> List.filter (.completed)
                              |> List.map (.id)
@@ -95,7 +99,7 @@ update action model =
                                    |> Effects.task
                                else Effects.none
       in
-        ( { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+        ( { model | questions = updatedQuestions, qAt = newestCompletion + 1 }
         , completionAction
         )
 
@@ -131,34 +135,43 @@ faClass question =
       "fa fa-square-o"
     else
       "fa fa-square-o"
-      
+
 viewQuestion : Signal.Address Action -> Question -> Html
 viewQuestion address question =
   Html.div
       [ Html.Attributes.class "question" ]
       [ Html.div
-            []
-            [ Html.text (toString question.num1)
-            , Html.text " + "
-            , Html.text (toString question.num2)
-            , Html.text " = x"
-            ]
-      , Html.div
-            []
-            [ Html.text "x  = "
-            , Html.input
-              [ Html.Attributes.type' "text"
-              , completionClass question |> Html.Attributes.class
-              , Html.Events.on "change" (Html.Events.targetValue) (targetToSubmission address question.id)
-              ]              
-              [ ]
-            , Html.button
-                    [ "btn btn-side " ++ completionClass question |> Html.Attributes.class ]
-                    [ Html.node "i"
-                            [ Html.Attributes.class (faClass question) ]
-                            [ ]
+            [ Html.Attributes.class "blanks" ]
+            [ Html.div
+                    []
+                    [ Html.text (toString question.num1)
+                    , Html.text " + "
+                    , Html.text (toString question.num2)
+                    , Html.text " = x"
+                    ]
+            , Html.div
+                    []
+                    [ Html.text "x  = "
+                    , Html.input
+                      [ Html.Attributes.type' "text"
+                      , completionClass question |> Html.Attributes.class
+                      , Html.Events.on "change" (Html.Events.targetValue) (targetToSubmission address question.id)
+                      ]
+                      [ ]
+                    , Html.button
+                            [ "btn btn-side " ++ completionClass question |> Html.Attributes.class ]
+                            [ Html.node "i"
+                                    [ Html.Attributes.class (faClass question) ]
+                                    [ ]
+                            ]
                     ]
             ]
+      , Html.div
+              [ Html.Attributes.class "bars" ]
+              [ barCollage { height = 10, width = 350, columns = 100 }
+                             [ [ (question.num1, red), (question.num2, green) ]
+                             , [ (Maybe.withDefault 0 question.guess, blue) ]
+                             ] |> Html.fromElement ]
       ]
 
 view : Signal.Address Action -> Model -> Html
@@ -167,7 +180,7 @@ view address model =
         [ Html.Attributes.class "specificLesson"]
         (model.questions
            |> List.map (viewQuestion address)
-           |> List.take model.qAt ) 
+           |> List.take model.qAt )
 
 -- All Together
 app = StartApp.start

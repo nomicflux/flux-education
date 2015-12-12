@@ -33,7 +33,7 @@ instance ToHtml Page where
         link_ [href_ $ toText "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css", rel_ $ toText "stylesheet"]
       body_ $ do
         with section_ [class_ $ toText "jumbotron"] $ do
-          h2_ (toHtml $ lessonKeyphrase les)
+          with div_ [class_ $ toText "keyphrase"] (h2_ (toHtml $ lessonKeyphrase les))
           with div_ [id_ $ toText "elmApp"] (toHtml "")
           with div_ [class_ $ toText "completion-div", id_ $ toText "completionDiv" ] (toHtml "")
 --          _p "Hi!"

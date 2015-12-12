@@ -40,4 +40,4 @@ envPool Development = 1
 envPool Production  = 8
 
 connStr :: Environment -> ConnectionString
-connStr _ = "host=localhost dbname=fluxdb user=flux password=test port=5432"
+connStr _ = "host=localhost dbname=fluxdb user=flux port=5432"

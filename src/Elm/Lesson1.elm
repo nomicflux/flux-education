@@ -4,7 +4,7 @@ import Signal exposing (Signal)
 import List
 import Maybe exposing (Maybe)
 import Result
-import String 
+import String
 import Html exposing (Html, Attribute)
 import Html.Attributes
 import Html.Events
@@ -12,6 +12,7 @@ import StartApp
 import Effects exposing (Effects, Never)
 import Task exposing (Task, andThen)
 import Color exposing (..)
+import NumberLine exposing (..)
 import Graphics.Element exposing (..)
 import Graphics.Collage exposing (..)
 
@@ -28,21 +29,23 @@ type alias Model =
 type alias Question =
   { num1 : Int
   , num2 : Int
+  , guess : Maybe Int
   , attempted : Bool
   , completed : Bool
-  , id : ID         
+  , id : ID
   }
 
 mkQuestion : Int -> Int -> ID -> Question
 mkQuestion x y id = { num1 = x
                        , num2 = y
+                       , guess = Nothing
                        , attempted = False
                        , completed = False
                        , id = id
                        }
 
 init : Model
-init = { questions = [ mkQuestion 2 3 1 
+init = { questions = [ mkQuestion 2 3 1
                       , mkQuestion 5 7 2
                       , mkQuestion 40 2 3
                       ]
@@ -61,7 +64,7 @@ port signalCompletion = completed.signal
 
 completed : Signal.Mailbox Bool
 completed = Signal.mailbox False
-            
+
 updateQuestion : ID -> Int -> Question -> Question
 updateQuestion id val question =
   if question.id == id
@@ -69,22 +72,22 @@ updateQuestion id val question =
     let
       completed = question.num1 + question.num2 == val
     in
-      { question | attempted <- True, completed <- completed }
+      { question | attempted = True, completed = completed, guess = Just val }
   else
     question
-            
+
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
     NoOp -> (model, Effects.none)
-    SendCompletion -> ({model | completed <- True}, Effects.none)
+    SendCompletion -> ({model | completed = True}, Effects.none)
     Submission id mval ->
       case mval of
         Nothing -> (model, Effects.none)
         Just val ->
           let
             updatedQuestions = List.map (updateQuestion id val) model.questions
-                               
+
             newestCompletion = updatedQuestions
                              |> List.filter (.completed)
                              |> List.map (.id)
@@ -99,7 +102,7 @@ update action model =
                                    |> Effects.task
                                else Effects.none
           in
-            ( { model | questions <- updatedQuestions, qAt <- newestCompletion + 1 }
+            ( { model | questions = updatedQuestions, qAt = newestCompletion + 1 }
             , completionAction
             )
 
@@ -139,20 +142,12 @@ faClass question =
     else
       "fa fa-square-o"
 
-type alias NumberLineInfo =
-  { amount : Int
-  , color  : Color
-  }
-      
-makeBar : List NumberLineInfo -> Html
-makeBar 
-      
 viewQuestion : Signal.Address Action -> Question -> Html
 viewQuestion address question =
   Html.div
-      [ Html.Attributes.class "question" ]
-      [ Html.span
-            []
+      [ Html.Attributes.class "question container" ]
+      [ Html.div
+            [ Html.Attributes.class "blanks" ]
             [ Html.text (toString question.num1)
             , Html.text " + "
             , Html.text (toString question.num2)
@@ -170,6 +165,12 @@ viewQuestion address question =
                           [ ]
                   ]
             ]
+      , Html.div
+            [ Html.Attributes.class "bars" ]
+            [ barCollage { height = 10, width = 350, columns = 100 }
+                          [ [ (question.num1, red), (question.num2, green) ]
+                          , [ (Maybe.withDefault 0 question.guess, blue) ]
+                          ] |> Html.fromElement ]
       ]
 
 view : Signal.Address Action -> Model -> Html
@@ -179,7 +180,7 @@ view address model =
         (model.questions
            |> List.map (viewQuestion address)
            |> List.take model.qAt )
-             
+
 -- All Together
 app = StartApp.start
       { init = (init, Effects.none)
