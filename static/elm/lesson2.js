@@ -11883,8 +11883,8 @@ Elm.NumberLine.make = function (_elm) {
       A2(makeFullBar,scale,dims),
       setsOfBars)));
    });
-   var Dimensions = F3(function (a,b,c) {
-      return {height: a,width: b,columns: c};
+   var Dimensions = F2(function (a,b) {
+      return {height: a,width: b};
    });
    var NumberLineInfo = F3(function (a,b,c) {
       return {start: a,size: b,color: c};
@@ -11898,6 +11898,133 @@ Elm.NumberLine.make = function (_elm) {
                                    ,numberBarToRect: numberBarToRect
                                    ,makeFullBar: makeFullBar
                                    ,barCollage: barCollage};
+};
+Elm.Question = Elm.Question || {};
+Elm.Question.make = function (_elm) {
+   "use strict";
+   _elm.Question = _elm.Question || {};
+   if (_elm.Question.values) return _elm.Question.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var _op = {};
+   var makeMath = function (s) {
+      return A2($Html.math,_U.list([]),_U.list([$Html.text(s)]));
+   };
+   var boxesComplete = function (q) {
+      return A2($List.all,
+      function (_p0) {
+         var _p1 = _p0;
+         return _p1._1.completed;
+      },
+      q.boxes);
+   };
+   var findLatestAnswered = function (qs) {
+      return A2($Maybe.withDefault,
+      0,
+      $List.maximum(A2($List.map,
+      function (_) {
+         return _.id;
+      },
+      A2($List.filter,boxesComplete,qs))));
+   };
+   var validateBox = F2(function (box,guess) {
+      return A2($Maybe.withDefault,false,box.validation(guess));
+   });
+   var updateBox = F3(function (wantedBid,val,_p2) {
+      var _p3 = _p2;
+      var _p5 = _p3._0;
+      var _p4 = _p3._1;
+      return _U.eq(_p5,wantedBid) ? {ctor: "_Tuple2"
+                                    ,_0: _p5
+                                    ,_1: _U.update(_p4,
+                                    {attempted: true
+                                    ,completed: A2(validateBox,_p4,val)
+                                    ,guess: $Maybe.Just(val)})} : {ctor: "_Tuple2",_0: _p5,_1: _p4};
+   });
+   var updateQuestion = F3(function (_p6,val,question) {
+      var _p7 = _p6;
+      return _U.eq(question.id,_p7._0) ? _U.update(question,
+      {boxes: A2($List.map,
+      A2(updateBox,_p7._1,val),
+      question.boxes)}) : question;
+   });
+   var mkBox = F2(function (bid,val) {
+      return {ctor: "_Tuple2"
+             ,_0: bid + 1
+             ,_1: {completed: false
+                  ,attempted: false
+                  ,validation: val
+                  ,guess: $Maybe.Nothing}};
+   });
+   var mkQuestion = F3(function (validations,qid,nums) {
+      var fullValidations = A2($List.map,
+      function (f) {
+         return f(nums);
+      },
+      validations);
+      return {nums: nums
+             ,boxes: A2($List.indexedMap,mkBox,fullValidations)
+             ,id: qid + 1};
+   });
+   var mkQBatch = F2(function (validations,nums) {
+      return A2($List.indexedMap,mkQuestion(validations),nums);
+   });
+   var faClass = F2(function (question,bid) {
+      var mbox = $List.head(A2($List.filter,
+      function (_p8) {
+         var _p9 = _p8;
+         return _U.eq(_p9._0,bid);
+      },
+      question.boxes));
+      var _p10 = mbox;
+      if (_p10.ctor === "Nothing") {
+            return "";
+         } else {
+            var _p11 = _p10._0._1;
+            return _p11.completed ? "fa fa-check-square-o" : _p11.attempted ? "fa fa-square-o" : "fa fa-square-o";
+         }
+   });
+   var completionClass = F2(function (question,bid) {
+      var mbox = $List.head(A2($List.filter,
+      function (_p12) {
+         var _p13 = _p12;
+         return _U.eq(_p13._0,bid);
+      },
+      question.boxes));
+      var _p14 = mbox;
+      if (_p14.ctor === "Nothing") {
+            return "";
+         } else {
+            var _p15 = _p14._0._1;
+            return _p15.completed ? "completed" : _p15.attempted ? "incorrect" : "new-question";
+         }
+   });
+   var Question = F3(function (a,b,c) {
+      return {nums: a,boxes: b,id: c};
+   });
+   var InputBox = F4(function (a,b,c,d) {
+      return {completed: a,attempted: b,validation: c,guess: d};
+   });
+   return _elm.Question.values = {_op: _op
+                                 ,InputBox: InputBox
+                                 ,Question: Question
+                                 ,completionClass: completionClass
+                                 ,faClass: faClass
+                                 ,mkBox: mkBox
+                                 ,mkQuestion: mkQuestion
+                                 ,mkQBatch: mkQBatch
+                                 ,validateBox: validateBox
+                                 ,updateBox: updateBox
+                                 ,updateQuestion: updateQuestion
+                                 ,boxesComplete: boxesComplete
+                                 ,findLatestAnswered: findLatestAnswered
+                                 ,makeMath: makeMath};
 };
 Elm.Lesson2 = Elm.Lesson2 || {};
 Elm.Lesson2.make = function (_elm) {
@@ -11915,25 +12042,13 @@ Elm.Lesson2.make = function (_elm) {
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $NumberLine = Elm.NumberLine.make(_elm),
+   $Question = Elm.Question.make(_elm),
    $Result = Elm.Result.make(_elm),
    $Signal = Elm.Signal.make(_elm),
    $StartApp = Elm.StartApp.make(_elm),
    $String = Elm.String.make(_elm),
    $Task = Elm.Task.make(_elm);
    var _op = {};
-   var faClass = function (question) {
-      return question.completed ? "fa fa-check-square-o" : question.attempted ? "fa fa-square-o" : "fa fa-square-o";
-   };
-   var completionClass = function (question) {
-      return question.completed ? "completed" : question.attempted ? "incorrect" : "new-question";
-   };
-   var updateQuestion = F3(function (id,val,question) {
-      if (_U.eq(question.id,id)) {
-            var completed = _U.eq(question.num1 + question.num2,val);
-            return _U.update(question,
-            {attempted: true,completed: completed,guess: $Maybe.Just(val)});
-         } else return question;
-   });
    var completed = $Signal.mailbox(false);
    var signalCompletion = Elm.Native.Port.make(_elm).outboundSignal("signalCompletion",
    function (v) {
@@ -11948,24 +12063,16 @@ Elm.Lesson2.make = function (_elm) {
                    ,_0: _U.update(model,{completed: true})
                    ,_1: $Effects.none};
          } else {
-            var _p1 = _p0._1;
+            var _p1 = _p0._2;
             if (_p1.ctor === "Nothing") {
                   return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
                } else {
                   var updatedQuestions = A2($List.map,
-                  A2(updateQuestion,_p0._0,_p1._0),
+                  A2($Question.updateQuestion,
+                  {ctor: "_Tuple2",_0: _p0._0,_1: _p0._1},
+                  _p1._0),
                   model.questions);
-                  var newestCompletion = A2($Maybe.withDefault,
-                  0,
-                  $List.maximum(A2($List.map,
-                  function (_) {
-                     return _.id;
-                  },
-                  A2($List.filter,
-                  function (_) {
-                     return _.completed;
-                  },
-                  updatedQuestions))));
+                  var newestCompletion = $Question.findLatestAnswered(updatedQuestions);
                   var completion = _U.cmp(newestCompletion + 1,
                   $List.length(model.questions)) > 0;
                   var completionAction = completion ? $Effects.task(A2($Task.map,
@@ -11978,53 +12085,86 @@ Elm.Lesson2.make = function (_elm) {
                }
          }
    });
-   var Submission = F2(function (a,b) {
-      return {ctor: "Submission",_0: a,_1: b};
+   var Submission = F3(function (a,b,c) {
+      return {ctor: "Submission",_0: a,_1: b,_2: c};
    });
-   var targetToSubmission = F3(function (address,id,val) {
+   var targetToSubmission = F4(function (address,qid,bid,val) {
       var mNumVal = $Result.toMaybe($String.toInt(val));
-      return A2($Signal.message,address,A2(Submission,id,mNumVal));
+      return A2($Signal.message,
+      address,
+      A3(Submission,qid,bid,mNumVal));
    });
    var viewQuestion = F2(function (address,question) {
+      var _p2 = function () {
+         var _p3 = question.nums;
+         if (_p3.ctor === "::" && _p3._1.ctor === "::") {
+               return {ctor: "_Tuple2"
+                      ,_0: $Basics.toString(_p3._0)
+                      ,_1: $Basics.toString(_p3._1._0)};
+            } else {
+               return {ctor: "_Tuple2",_0: "",_1: ""};
+            }
+      }();
+      var s1 = _p2._0;
+      var s2 = _p2._1;
+      var g1 = function () {
+         var _p4 = question.boxes;
+         if (_p4.ctor === "::" && _p4._0.ctor === "_Tuple2") {
+               return _p4._0._1.guess;
+            } else {
+               return $Maybe.Nothing;
+            }
+      }();
+      var _p5 = function () {
+         var _p6 = question.nums;
+         if (_p6.ctor === "::" && _p6._1.ctor === "::") {
+               return {ctor: "_Tuple2",_0: _p6._0,_1: _p6._1._0};
+            } else {
+               return {ctor: "_Tuple2",_0: 0,_1: 0};
+            }
+      }();
+      var n1 = _p5._0;
+      var n2 = _p5._1;
       return A2($Html.div,
       _U.list([$Html$Attributes.$class("question")]),
       _U.list([A2($Html.div,
               _U.list([$Html$Attributes.$class("blanks")]),
               _U.list([A2($Html.div,
                       _U.list([]),
-                      _U.list([$Html.text($Basics.toString(question.num1))
-                              ,$Html.text(" + ")
-                              ,$Html.text($Basics.toString(question.num2))
-                              ,$Html.text(" = x")]))
+                      _U.list([$Question.makeMath(A2($Basics._op["++"],
+                      s1,
+                      A2($Basics._op["++"]," + ",A2($Basics._op["++"],s2," = x"))))]))
                       ,A2($Html.div,
                       _U.list([]),
                       _U.list([$Html.text("x  = ")
                               ,A2($Html.input,
                               _U.list([$Html$Attributes.type$("text")
-                                      ,$Html$Attributes.$class(completionClass(question))
+                                      ,$Html$Attributes.$class(A2($Question.completionClass,
+                                      question,
+                                      1))
                                       ,A3($Html$Events.on,
                                       "change",
                                       $Html$Events.targetValue,
-                                      A2(targetToSubmission,address,question.id))]),
+                                      A3(targetToSubmission,address,question.id,1))]),
                               _U.list([]))
                               ,A2($Html.button,
                               _U.list([$Html$Attributes.$class(A2($Basics._op["++"],
                               "btn btn-side ",
-                              completionClass(question)))]),
+                              A2($Question.completionClass,question,1)))]),
                               _U.list([A3($Html.node,
                               "i",
-                              _U.list([$Html$Attributes.$class(faClass(question))]),
+                              _U.list([$Html$Attributes.$class(A2($Question.faClass,
+                              question,
+                              1))]),
                               _U.list([]))]))]))]))
               ,A2($Html.div,
               _U.list([$Html$Attributes.$class("bars")]),
               _U.list([$Html.fromElement(A2($NumberLine.barCollage,
-              {height: 10,width: 350,columns: 100},
-              _U.list([_U.list([{ctor: "_Tuple2"
-                                ,_0: question.num1
-                                ,_1: $Color.red}
-                               ,{ctor: "_Tuple2",_0: question.num2,_1: $Color.green}])
+              {height: 10,width: 350},
+              _U.list([_U.list([{ctor: "_Tuple2",_0: n1,_1: $Color.red}
+                               ,{ctor: "_Tuple2",_0: n2,_1: $Color.green}])
                       ,_U.list([{ctor: "_Tuple2"
-                                ,_0: A2($Maybe.withDefault,0,question.guess)
+                                ,_0: A2($Maybe.withDefault,0,g1)
                                 ,_1: $Color.blue}])])))]))]));
    });
    var view = F2(function (address,model) {
@@ -12034,19 +12174,24 @@ Elm.Lesson2.make = function (_elm) {
       model.qAt,
       A2($List.map,viewQuestion(address),model.questions)));
    });
-   var mkQuestion = F3(function (x,y,id) {
-      return {num1: x
-             ,num2: y
-             ,attempted: false
-             ,completed: false
-             ,guess: $Maybe.Nothing
-             ,id: id};
-   });
-   var init = {questions: _U.list([A3(mkQuestion,2,3,1)
-                                  ,A3(mkQuestion,5,7,2)
-                                  ,A3(mkQuestion,40,2,3)])
-              ,qAt: 1
-              ,completed: false};
+   var init = function () {
+      var numPairs = _U.list([_U.list([2,3])
+                             ,_U.list([5,7])
+                             ,_U.list([40,2])]);
+      var validate = F2(function (nums,guess) {
+         var _p7 = nums;
+         if (_p7.ctor === "::" && _p7._1.ctor === "::") {
+               return $Maybe.Just(_U.eq(_p7._0 + _p7._1._0,guess));
+            } else {
+               return $Maybe.Nothing;
+            }
+      });
+      return {questions: A2($Question.mkQBatch,
+             _U.list([validate]),
+             numPairs)
+             ,qAt: 1
+             ,completed: false};
+   }();
    var app = $StartApp.start({init: {ctor: "_Tuple2"
                                     ,_0: init
                                     ,_1: $Effects.none}
@@ -12056,30 +12201,17 @@ Elm.Lesson2.make = function (_elm) {
    var tasks = Elm.Native.Task.make(_elm).performSignal("tasks",
    app.tasks);
    var main = app.html;
-   var Question = F6(function (a,b,c,d,e,f) {
-      return {num1: a
-             ,num2: b
-             ,attempted: c
-             ,completed: d
-             ,guess: e
-             ,id: f};
-   });
    var Model = F3(function (a,b,c) {
       return {questions: a,qAt: b,completed: c};
    });
    return _elm.Lesson2.values = {_op: _op
                                 ,Model: Model
-                                ,Question: Question
-                                ,mkQuestion: mkQuestion
                                 ,init: init
                                 ,Submission: Submission
                                 ,SendCompletion: SendCompletion
                                 ,completed: completed
-                                ,updateQuestion: updateQuestion
                                 ,update: update
                                 ,targetToSubmission: targetToSubmission
-                                ,completionClass: completionClass
-                                ,faClass: faClass
                                 ,viewQuestion: viewQuestion
                                 ,view: view
                                 ,app: app

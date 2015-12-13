@@ -1,90 +1,116 @@
 module Question where
 
-import String exposing (String)
+import List
+import Html exposing (Html)
+import Maybe exposing (withDefault)
 
--- Model
+type alias QuestionID = Int
 
-type alias ID = Int
+type alias BoxID = Int
 
-type Component = Definite Int
-               | Indefinite String
-               | Unknown
-
-type Term = Singleton Component
-          | Sum Term Term
-          | Difference Term Term
-          | Product Term Term
-          | Division Term Term
-
-type Equation = Equation Term Term
-
-type alias Metaquation = { equation : Equation
-                         , attempted : Bool
-                         , completed : Bool
-                         , id : ID
-                         }
-              
-type alias Model =
-  { equations : List Metaquation
+type alias InputBox =
+  { completed : Bool
+  , attempted : Bool
+  , validation : Int -> Maybe Bool
+  , guess : Maybe Int
   }
 
-twoMaybes : Maybe a -> Maybe (List a) -> Maybe (List a)
-twoMaybes mx my =
-  case (mx, my) of
-    (Nothing, _) -> Nothing
-    (_, Nothing) -> Nothing
-    (Just a, Just l) -> Just (a :: l)
-                 
-listToMaybe : List (Maybe a) -> Maybe (List a)
-listToMaybe l = List.foldl twoMaybes (Just []) l
+type alias Question =
+  { nums : List Int
+  , boxes : List ( BoxID, InputBox )
+  , id : QuestionID
+  }
 
-stringToComponent : String -> Maybe Component
-stringToComponent str =
+completionClass : Question -> BoxID -> String
+completionClass question bid =
   let
-    strNum = String.toInt str |> Result.toMaybe |> Maybe.map Definite
-    ( h, r ) = uncons str |> Maybe.withDefault (' ', "")
-    strVar = if Char.isLower h then Just (String.fromChar str) else Nothing |> Maybe.map Indefinite
-    strPlace = if h == '?' then Just Unknown else Nothing
+    mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
   in
-    Maybe.oneOf [strNum, strVar, strPlace]
-                
-stringToEquation : String -> Maybe Equation
-stringToEquation str =
+    case mbox of
+      Nothing -> ""
+      Just (_, box) ->
+        if box.completed
+        then
+          "completed"
+        else
+          if box.attempted
+          then
+            "incorrect"
+          else
+            "new-question"
+
+faClass : Question -> BoxID -> String
+faClass question bid =
   let
-    parts = String.split "=" str
+    mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
   in
-    case parts of
-      ( l, r ) ->
-        let
-          splitToComp = Strings.split "+"
-                       >> List.map (stringToComponent << Strings.trim)
-                       >> listToMaybe
-          left = splitToInt l
-          right = splitToInt r
-        in
-          case (left, right) of
-            (Nothing, _) -> Nothing
-            (_, Nothing) -> Nothing
-            (Just ml, Just mr) -> Just (Equation ml mr)
-      _ -> Nothing
-                 
-init : String -> Model
-init str =
+    case mbox of
+      Nothing -> ""
+      Just (_, box) ->
+        if box.completed
+        then
+          "fa fa-check-square-o"
+        else
+          if box.attempted
+          then
+            "fa fa-square-o"
+          else
+            "fa fa-square-o"
+
+mkBox : BoxID -> (Int -> Maybe Bool) -> (BoxID, InputBox)
+mkBox bid val = (bid + 1,
+                 { completed = False
+                  , attempted = False
+                  , validation = val
+                  , guess = Nothing
+                 }
+                )
+
+mkQuestion : List (List Int -> Int -> Maybe Bool) -> QuestionID -> List Int -> Question
+mkQuestion validations qid nums =
   let
-    eqs = Strings.split ";" str
-        |> List.map stringToEquation
-        |> listToMaybe |> Maybe.withDefault []
+    fullValidations : List (Int -> Maybe Bool)
+    fullValidations = List.map (\ f -> f nums) validations
   in
-    List.indexedMap
-          (\ (i, e) -> { equation = e
-                       , attempted = False
-                       , completed = False
-                       , id = i
-                       }
-          ) eqs
+    { nums = nums
+    , boxes = List.indexedMap mkBox fullValidations
+    , id = qid + 1
+    }
 
--- Update
+mkQBatch : List (List Int -> Int -> Maybe Bool) -> List (List Int) -> List Question
+mkQBatch validations nums =
+  List.indexedMap
+      (mkQuestion validations)
+      nums
 
-type Action = Submission ID Int
+validateBox : InputBox -> Int -> Bool
+validateBox box guess = withDefault False (box.validation guess)
 
--- View
+updateBox : BoxID -> Int -> ( BoxID, InputBox ) -> ( BoxID, InputBox )
+updateBox wantedBid val (thisBid, box) =
+  if thisBid == wantedBid
+  then
+    (thisBid, { box | attempted = True, completed = validateBox box val, guess = Just val })
+  else
+    (thisBid, box)
+
+updateQuestion : ( QuestionID, BoxID ) -> Int -> Question -> Question
+updateQuestion (qid, bid) val question =
+  if question.id == qid
+  then
+    { question | boxes = List.map (updateBox bid val) question.boxes }
+  else
+    question
+
+boxesComplete : Question -> Bool
+boxesComplete q = List.all (\ (_, b) -> b.completed ) q.boxes
+
+findLatestAnswered : List Question -> QuestionID
+findLatestAnswered qs = qs
+                      |> List.filter boxesComplete
+                      |> List.map (.id)
+                      |> List.maximum
+                      |> Maybe.withDefault 0
+
+makeMath : String -> Html
+makeMath s = Html.math [] [ Html.text s ]
