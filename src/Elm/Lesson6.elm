@@ -38,8 +38,11 @@ init =
     numPairs = [ [2,5], [5,12], [40,42] ]
     pairToLine l =
       case l of
-        (x :: y :: _) -> [ [ (Constant {value=x}, lightCharcoal), (Variable {name="x", value=Nothing, prevValue=Nothing}, blue) ]
+        (x :: y :: _) -> [ [ (Variable {name="x", value=Nothing, prevValue=Nothing}, blue), (Constant {value=x}, red) ]
                          , [ (Constant {value=y}, green) ]
+                         , []
+                         , [ (Constant {value=y}, green), (Constant {value=(-x)}, lightCharcoal) ]
+                         , [ (Variable {name="x", value=Nothing, prevValue=Nothing}, blue) ]
                          ]
         _ -> [ ]
     numberlines = List.map (\ np -> NumberLine.init
