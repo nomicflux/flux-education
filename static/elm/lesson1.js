@@ -12043,22 +12043,307 @@ Elm.StartApp.make = function (_elm) {
                                  ,Config: Config
                                  ,App: App};
 };
+Elm.Animation = Elm.Animation || {};
+Elm.Animation.make = function (_elm) {
+   "use strict";
+   _elm.Animation = _elm.Animation || {};
+   if (_elm.Animation.values) return _elm.Animation.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $Time = Elm.Time.make(_elm);
+   var _op = {};
+   var isScheduled = F2(function (t,_p0) {
+      var _p1 = _p0;
+      return _U.cmp(t,_p1._0.start + _p1._0.delay) < 1;
+   });
+   var getTo = function (_p2) {
+      var _p3 = _p2;
+      return _p3._0.to;
+   };
+   var getFrom = function (_p4) {
+      var _p5 = _p4;
+      return _p5._0.from;
+   };
+   var getEase = function (_p6) {
+      var _p7 = _p6;
+      return _p7._0.ease;
+   };
+   var getDelay = function (_p8) {
+      var _p9 = _p8;
+      return _p9._0.delay;
+   };
+   var getStart = function (_p10) {
+      var _p11 = _p10;
+      return _p11._0.start;
+   };
+   var timeElapsed = F2(function (t,_p12) {
+      var _p13 = _p12;
+      return A2($Basics.max,0,t - (_p13._0.start + _p13._0.delay));
+   });
+   var defaultEase = function (x) {
+      return (1 - $Basics.cos($Basics.pi * x)) / 2;
+   };
+   var spd = F3(function (dos,from,to) {
+      var _p14 = dos;
+      if (_p14.ctor === "Duration") {
+            return $Basics.abs(to - from) / _p14._0;
+         } else {
+            return _p14._0;
+         }
+   });
+   var getSpeed = function (_p15) {
+      var _p16 = _p15;
+      return A3(spd,_p16._0.dos,_p16._0.from,_p16._0.to);
+   };
+   var dur = F3(function (dos,from,to) {
+      var _p17 = dos;
+      if (_p17.ctor === "Duration") {
+            return _p17._0;
+         } else {
+            return $Basics.abs(to - from) / _p17._0;
+         }
+   });
+   var animate = F2(function (t,_p18) {
+      var _p19 = _p18;
+      var _p23 = _p19._0.to;
+      var _p22 = _p19._0.start;
+      var _p21 = _p19._0.from;
+      var duration = A3(dur,_p19._0.dos,_p21,_p23);
+      var fr = A3($Basics.clamp,
+      0,
+      1,
+      (t - _p22 - _p19._0.delay) / duration);
+      var eased = _p19._0.ease(fr);
+      var correction = function () {
+         var _p20 = _p19._0.ramp;
+         if (_p20.ctor === "Nothing") {
+               return 0;
+            } else {
+               var from$ = _p20._0 * (t - _p22);
+               var eased$ = defaultEase(fr);
+               return from$ - from$ * eased$;
+            }
+      }();
+      return _p21 + (_p23 - _p21) * eased + correction;
+   });
+   var velocity = F2(function (t,u) {
+      var forwDiff = A2(animate,t + 10,u);
+      var backDiff = A2(animate,t - 10,u);
+      return (forwDiff - backDiff) / 20;
+   });
+   var timeRemaining = F2(function (t,_p24) {
+      var _p25 = _p24;
+      var duration = A3(dur,_p25._0.dos,_p25._0.from,_p25._0.to);
+      return A2($Basics.max,
+      0,
+      _p25._0.start + _p25._0.delay + duration - t);
+   });
+   var getDuration = function (_p26) {
+      var _p27 = _p26;
+      return A3(dur,_p27._0.dos,_p27._0.from,_p27._0.to);
+   };
+   var equals = F2(function (_p29,_p28) {
+      var _p30 = _p29;
+      var _p33 = _p30._0;
+      var _p31 = _p28;
+      var _p32 = _p31._0;
+      return _U.eq(_p33.start + _p33.delay,
+      _p32.start + _p32.delay) && (_U.eq(_p33.from,
+      _p32.from) && (_U.eq(_p33.to,_p32.to) && (_U.eq(_p33.ramp,
+      _p32.ramp) && ((_U.eq(_p33.dos,_p32.dos) || _U.cmp(1.0e-3,
+      $Basics.abs(A3(dur,_p33.dos,_p33.from,_p33.to) - A3(dur,
+      _p32.dos,
+      _p32.from,
+      _p32.to))) > -1) && A2($List.all,
+      function (t) {
+         return _U.eq(_p33.ease(t),_p32.ease(t));
+      },
+      _U.list([0.1,0.3,0.7,0.9]))))));
+   });
+   var isRunning = F2(function (t,_p34) {
+      var _p35 = _p34;
+      var _p37 = _p35._0.start;
+      var _p36 = _p35._0.delay;
+      var duration = A3(dur,_p35._0.dos,_p35._0.from,_p35._0.to);
+      return _U.cmp(t,_p37 + _p36) > 0 && _U.cmp(t,
+      _p37 + _p36 + duration) < 0;
+   });
+   var isDone = F2(function (t,_p38) {
+      var _p39 = _p38;
+      var duration = A3(dur,_p39._0.dos,_p39._0.from,_p39._0.to);
+      return _U.cmp(t,_p39._0.start + _p39._0.delay + duration) > -1;
+   });
+   var A = function (a) {    return {ctor: "A",_0: a};};
+   var undo = F2(function (t,_p40) {
+      var _p41 = _p40;
+      var _p42 = _p41._0;
+      return A(_U.update(_p42,
+      {from: _p42.to
+      ,to: _p42.from
+      ,start: t
+      ,delay: 0 - A2(timeRemaining,t,_p41)
+      ,ramp: $Maybe.Nothing
+      ,ease: function (t) {
+         return 1 - _p42.ease(1 - t);
+      }}));
+   });
+   var delay = F2(function (x,_p43) {
+      var _p44 = _p43;
+      return A(_U.update(_p44._0,{delay: x}));
+   });
+   var ease = F2(function (x,_p45) {
+      var _p46 = _p45;
+      return A(_U.update(_p46._0,{ease: x}));
+   });
+   var from = F2(function (x,_p47) {
+      var _p48 = _p47;
+      return A(_U.update(_p48._0,{from: x,ramp: $Maybe.Nothing}));
+   });
+   var to = F2(function (x,_p49) {
+      var _p50 = _p49;
+      return A(_U.update(_p50._0,{to: x,ramp: $Maybe.Nothing}));
+   });
+   var AnimRecord = F7(function (a,b,c,d,e,f,g) {
+      return {start: a
+             ,delay: b
+             ,dos: c
+             ,ramp: d
+             ,ease: e
+             ,from: f
+             ,to: g};
+   });
+   var Speed = function (a) {    return {ctor: "Speed",_0: a};};
+   var speed = F2(function (x,_p51) {
+      var _p52 = _p51;
+      return A(_U.update(_p52._0,{dos: Speed($Basics.abs(x))}));
+   });
+   var Duration = function (a) {
+      return {ctor: "Duration",_0: a};
+   };
+   var defaultDuration = Duration(750 * $Time.millisecond);
+   var animation = function (t) {
+      return A(A7(AnimRecord,
+      t,
+      0,
+      defaultDuration,
+      $Maybe.Nothing,
+      defaultEase,
+      0,
+      1));
+   };
+   var retarget = F3(function (t,newTo,_p53) {
+      var _p54 = _p53;
+      var _p57 = _p54;
+      var _p56 = _p54._0;
+      if (_U.eq(newTo,_p56.to)) return _p57; else if (_U.eq(_p56.from,
+         _p56.to)) return A(_U.update(_p56,
+            {start: t
+            ,to: newTo
+            ,dos: defaultDuration
+            ,ramp: $Maybe.Nothing})); else if (A2(isScheduled,t,_p57))
+            return A(_U.update(_p56,{to: newTo,ramp: $Maybe.Nothing}));
+            else if (A2(isDone,t,_p57)) return A(_U.update(_p56,
+                  {start: t
+                  ,delay: 0
+                  ,from: _p56.to
+                  ,to: newTo
+                  ,ramp: $Maybe.Nothing})); else {
+                     var newSpeed = function () {
+                        var _p55 = _p56.dos;
+                        if (_p55.ctor === "Speed") {
+                              return _p56.dos;
+                           } else {
+                              return Speed(A3(spd,_p56.dos,_p56.from,_p56.to));
+                           }
+                     }();
+                     var pos = A2(animate,t,_p57);
+                     var vel = A2(velocity,t,_p57);
+                     return A(A7(AnimRecord,
+                     t,
+                     0,
+                     newSpeed,
+                     $Maybe.Just(vel),
+                     _p56.ease,
+                     pos,
+                     newTo));
+                  }
+   });
+   var $static = function (x) {
+      return A(A7(AnimRecord,
+      0,
+      0,
+      Duration(0),
+      $Maybe.Nothing,
+      defaultEase,
+      x,
+      x));
+   };
+   var duration = F2(function (x,_p58) {
+      var _p59 = _p58;
+      return A(_U.update(_p59._0,{dos: Duration(x)}));
+   });
+   return _elm.Animation.values = {_op: _op
+                                  ,animation: animation
+                                  ,$static: $static
+                                  ,animate: animate
+                                  ,duration: duration
+                                  ,speed: speed
+                                  ,delay: delay
+                                  ,ease: ease
+                                  ,from: from
+                                  ,to: to
+                                  ,undo: undo
+                                  ,retarget: retarget
+                                  ,getStart: getStart
+                                  ,getDuration: getDuration
+                                  ,getSpeed: getSpeed
+                                  ,getDelay: getDelay
+                                  ,getEase: getEase
+                                  ,getFrom: getFrom
+                                  ,getTo: getTo
+                                  ,equals: equals
+                                  ,velocity: velocity
+                                  ,timeElapsed: timeElapsed
+                                  ,timeRemaining: timeRemaining
+                                  ,isScheduled: isScheduled
+                                  ,isRunning: isRunning
+                                  ,isDone: isDone};
+};
 Elm.NumberLine = Elm.NumberLine || {};
 Elm.NumberLine.make = function (_elm) {
    "use strict";
    _elm.NumberLine = _elm.NumberLine || {};
    if (_elm.NumberLine.values) return _elm.NumberLine.values;
    var _U = Elm.Native.Utils.make(_elm),
+   $Animation = Elm.Animation.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Color = Elm.Color.make(_elm),
    $Debug = Elm.Debug.make(_elm),
+   $Easing = Elm.Easing.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
    $Graphics$Collage = Elm.Graphics.Collage.make(_elm),
    $Graphics$Element = Elm.Graphics.Element.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Html$Attributes = Elm.Html.Attributes.make(_elm),
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Result = Elm.Result.make(_elm),
-   $Signal = Elm.Signal.make(_elm);
+   $Signal = Elm.Signal.make(_elm),
+   $Time = Elm.Time.make(_elm);
    var _op = {};
+   var termToInt = function (term) {
+      var _p0 = term;
+      if (_p0.ctor === "Constant") {
+            return _p0._0.value;
+         } else {
+            return A2($Maybe.withDefault,0,_p0._0.value);
+         }
+   };
    var numberBarToRect = F3(function (scale,height,nl) {
       var width = nl.size * scale;
       return A2($Graphics$Collage.moveX,
@@ -12084,27 +12369,64 @@ Elm.NumberLine.make = function (_elm) {
       $Basics.toFloat(dims.height));
       var positionBars = scanBars(bars);
       return A2($List.map,
-      function (_p0) {
+      function (_p1) {
          return A2($Graphics$Collage.moveY,
          $Basics.toFloat((ypos - 1) * dims.height * -1) + $Basics.toFloat(dims.height) / 2,
-         rectIt(_p0));
+         rectIt(_p1));
       },
       positionBars);
    });
-   var numberToBar = F2(function (i,c) {
-      return {start: 0,size: $Basics.toFloat(i),color: c};
+   var duration = 1 * $Time.second;
+   var moveBar = F2(function (start,stop) {
+      return A2($Animation.ease,
+      $Easing.easeOutElastic,
+      A2($Animation.to,
+      stop,
+      A2($Animation.from,start,$Animation.animation(0))));
    });
-   var barCollage = F2(function (dims,setsOfVals) {
-      var setsOfBars = A2($List.map,
-      $List.map($Basics.uncurry(numberToBar)),
-      setsOfVals);
-      var xMax = A2($Maybe.withDefault,
+   var numberToBar = F3(function (t,term,c) {
+      var _p2 = term;
+      if (_p2.ctor === "Constant") {
+            return {start: 0
+                   ,size: $Basics.toFloat(_p2._0.value)
+                   ,color: c};
+         } else {
+            return {start: 0
+                   ,size: A2($Animation.animate,
+                   t,
+                   A2(moveBar,
+                   $Basics.toFloat(A2($Maybe.withDefault,0,_p2._0.prevValue)),
+                   $Basics.toFloat(A2($Maybe.withDefault,0,_p2._0.value))))
+                   ,color: c};
+         }
+   });
+   var barCollage = F3(function (dims,setsOfVals,anistate) {
+      var xMax = function (x) {
+         return x + 5;
+      }(A2($Maybe.withDefault,
       0,
       $List.maximum(A2($List.map,
-      $List.sum,
-      A2($List.map,$List.map($Basics.fst),setsOfVals))));
+      function (_p3) {
+         return $Basics.abs($List.sum(_p3));
+      },
+      A2($List.map,
+      $List.map(function (_p4) {
+         return termToInt($Basics.fst(_p4));
+      }),
+      setsOfVals)))));
       var scale = $Basics.toFloat(dims.width) / ($Basics.toFloat(xMax) * 2);
       var numRows = $List.length(setsOfVals);
+      var timePassed = function () {
+         var _p5 = anistate;
+         if (_p5.ctor === "Nothing") {
+               return 0;
+            } else {
+               return _p5._0.elapsedTime;
+            }
+      }();
+      var setsOfBars = A2($List.map,
+      $List.map($Basics.uncurry(numberToBar(timePassed))),
+      setsOfVals);
       return A3($Graphics$Collage.collage,
       dims.width,
       numRows * dims.height * 2,
@@ -12112,6 +12434,89 @@ Elm.NumberLine.make = function (_elm) {
       A2(makeFullBar,scale,dims),
       setsOfBars)));
    });
+   var view = F2(function (address,state) {
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("bars")]),
+      _U.list([$Html.fromElement(A3(barCollage,
+      state.collageSize,
+      state.values,
+      state.animationState))]));
+   });
+   var Tick = function (a) {    return {ctor: "Tick",_0: a};};
+   var UpdateVariable = F2(function (a,b) {
+      return {ctor: "UpdateVariable",_0: a,_1: b};
+   });
+   var init = F2(function (dims,nums) {
+      return {values: nums
+             ,collageSize: dims
+             ,animationState: $Maybe.Nothing};
+   });
+   var State = F3(function (a,b,c) {
+      return {values: a,collageSize: b,animationState: c};
+   });
+   var Variable = function (a) {
+      return {ctor: "Variable",_0: a};
+   };
+   var updateVar = F2(function (oldTerm,newTerm) {
+      var _p6 = oldTerm;
+      if (_p6.ctor === "Constant") {
+            return oldTerm;
+         } else {
+            var _p9 = _p6._0;
+            var _p7 = newTerm;
+            if (_p7.ctor === "Constant") {
+                  return oldTerm;
+               } else {
+                  var _p8 = _p7._0;
+                  return _U.eq(_p9.name,_p8.name) ? Variable({name: _p9.name
+                                                             ,value: _p8.value
+                                                             ,prevValue: _p9.value}) : oldTerm;
+               }
+         }
+   });
+   var update = F2(function (state,action) {
+      var _p10 = action;
+      if (_p10.ctor === "Tick") {
+            var _p12 = _p10._0;
+            var newElapsedTime = function () {
+               var _p11 = state.animationState;
+               if (_p11.ctor === "Nothing") {
+                     return 0;
+                  } else {
+                     return _p11._0.elapsedTime + (_p12 - _p11._0.prevTime);
+                  }
+            }();
+            return _U.cmp(newElapsedTime,duration) > 0 ? {ctor: "_Tuple2"
+                                                         ,_0: _U.update(state,
+                                                         {animationState: $Maybe.Just({elapsedTime: duration
+                                                                                      ,prevTime: _p12})})
+                                                         ,_1: $Effects.none} : {ctor: "_Tuple2"
+                                                                               ,_0: _U.update(state,
+                                                                               {animationState: $Maybe.Just({elapsedTime: newElapsedTime
+                                                                                                            ,prevTime: _p12})})
+                                                                               ,_1: $Effects.tick(Tick)};
+         } else {
+            var updatedVars = A2($List.map,
+            $List.map(function (_p13) {
+               var _p14 = _p13;
+               return {ctor: "_Tuple2"
+                      ,_0: A2(updateVar,
+                      _p14._0,
+                      Variable({name: _p10._0
+                               ,value: $Maybe.Just(_p10._1)
+                               ,prevValue: $Maybe.Nothing}))
+                      ,_1: _p14._1};
+            }),
+            state.values);
+            return {ctor: "_Tuple2"
+                   ,_0: _U.update(state,
+                   {values: updatedVars,animationState: $Maybe.Nothing})
+                   ,_1: $Effects.tick(Tick)};
+         }
+   });
+   var Constant = function (a) {
+      return {ctor: "Constant",_0: a};
+   };
    var Dimensions = F2(function (a,b) {
       return {height: a,width: b};
    });
@@ -12121,12 +12526,24 @@ Elm.NumberLine.make = function (_elm) {
    return _elm.NumberLine.values = {_op: _op
                                    ,NumberLineInfo: NumberLineInfo
                                    ,Dimensions: Dimensions
+                                   ,Constant: Constant
+                                   ,Variable: Variable
+                                   ,State: State
+                                   ,init: init
+                                   ,UpdateVariable: UpdateVariable
+                                   ,Tick: Tick
+                                   ,moveBar: moveBar
+                                   ,updateVar: updateVar
+                                   ,duration: duration
+                                   ,update: update
                                    ,numberToBar: numberToBar
                                    ,addBars: addBars
                                    ,scanBars: scanBars
                                    ,numberBarToRect: numberBarToRect
                                    ,makeFullBar: makeFullBar
-                                   ,barCollage: barCollage};
+                                   ,barCollage: barCollage
+                                   ,termToInt: termToInt
+                                   ,view: view};
 };
 Elm.Question = Elm.Question || {};
 Elm.Question.make = function (_elm) {
@@ -12286,38 +12703,97 @@ Elm.Lesson1.make = function (_elm) {
    completed.signal);
    var NoOp = {ctor: "NoOp"};
    var SendCompletion = {ctor: "SendCompletion"};
-   var taskToNone = function (task) {
-      return A2($Task.map,$Basics.always(SendCompletion),task);
-   };
+   var RelayNumberLine = F2(function (a,b) {
+      return {ctor: "RelayNumberLine",_0: a,_1: b};
+   });
+   var updateNumberLines = F4(function (qFunc,
+   nlFunc,
+   wanted,
+   pairs) {
+      var updateBoth = function (_p0) {
+         var _p1 = _p0;
+         var _p4 = _p1.question;
+         var _p3 = _p1.numberline;
+         if (_U.eq(_p4.id,wanted)) {
+               var _p2 = nlFunc(_p3);
+               var newNL = _p2._0;
+               var nlEffect = _p2._1;
+               return {ctor: "_Tuple2"
+                      ,_0: {question: qFunc(_p4),numberline: newNL}
+                      ,_1: {ctor: "_Tuple2",_0: _p4.id,_1: nlEffect}};
+            } else return {ctor: "_Tuple2"
+                          ,_0: {question: _p4,numberline: _p3}
+                          ,_1: {ctor: "_Tuple2",_0: _p4.id,_1: $Effects.none}};
+      };
+      var allUpdate = A2($List.map,updateBoth,pairs);
+      var updatedQuestions = A2($List.map,$Basics.fst,allUpdate);
+      var updatedEffects = A2($List.map,
+      function (_p5) {
+         return function (_p6) {
+            var _p7 = _p6;
+            return A2($Effects.map,RelayNumberLine(_p7._0),_p7._1);
+         }($Basics.snd(_p5));
+      },
+      allUpdate);
+      return {ctor: "_Tuple2"
+             ,_0: updatedQuestions
+             ,_1: updatedEffects};
+   });
    var update = F2(function (action,model) {
-      var _p0 = action;
-      switch (_p0.ctor)
-      {case "NoOp": return {ctor: "_Tuple2"
-                           ,_0: model
-                           ,_1: $Effects.none};
-         case "SendCompletion": return {ctor: "_Tuple2"
-                                       ,_0: _U.update(model,{completed: true})
-                                       ,_1: $Effects.none};
-         default: var _p1 = _p0._2;
-           if (_p1.ctor === "Nothing") {
+      var _p8 = action;
+      switch (_p8.ctor)
+      {case "SendCompletion": return {ctor: "_Tuple2"
+                                     ,_0: _U.update(model,{completed: true})
+                                     ,_1: $Effects.none};
+         case "Submission": var _p12 = _p8._0;
+           var _p9 = _p8._2;
+           if (_p9.ctor === "Nothing") {
                  return {ctor: "_Tuple2",_0: model,_1: $Effects.none};
               } else {
-                 var updatedQuestions = A2($List.map,
-                 A2($Question.updateQuestion,
-                 {ctor: "_Tuple2",_0: _p0._0,_1: _p0._1},
-                 _p1._0),
+                 var _p11 = _p9._0;
+                 var updateThisV = function (s) {
+                    return A2($NumberLine.update,
+                    s,
+                    A2($NumberLine.UpdateVariable,"x",_p11));
+                 };
+                 var updateThisQ = A2($Question.updateQuestion,
+                 {ctor: "_Tuple2",_0: _p12,_1: _p8._1},
+                 _p11);
+                 var _p10 = A4(updateNumberLines,
+                 updateThisQ,
+                 updateThisV,
+                 _p12,
                  model.questions);
-                 var newestCompletion = $Question.findLatestAnswered(updatedQuestions);
+                 var qs = _p10._0;
+                 var es = _p10._1;
+                 var newestCompletion = $Question.findLatestAnswered(A2($List.map,
+                 function (_) {
+                    return _.question;
+                 },
+                 qs));
                  var completion = _U.cmp(newestCompletion + 1,
                  $List.length(model.questions)) > 0;
-                 var completionAction = completion ? $Effects.task(taskToNone(A2($Signal.send,
-                 completed.address,
-                 true))) : $Effects.none;
+                 var completionAction = completion ? $Effects.task(A2($Task.map,
+                 $Basics.always(SendCompletion),
+                 A2($Signal.send,completed.address,true))) : $Effects.none;
                  return {ctor: "_Tuple2"
-                        ,_0: _U.update(model,
-                        {questions: updatedQuestions,qAt: newestCompletion + 1})
-                        ,_1: completionAction};
-              }}
+                        ,_0: _U.update(model,{questions: qs,qAt: newestCompletion + 1})
+                        ,_1: $Effects.batch(A2($List._op["::"],completionAction,es))};
+              }
+         case "RelayNumberLine": var fireEffect = function (numberline) {
+              return A2($NumberLine.update,numberline,_p8._1);
+           };
+           var _p13 = A4(updateNumberLines,
+           $Basics.identity,
+           fireEffect,
+           _p8._0,
+           model.questions);
+           var qs = _p13._0;
+           var es = _p13._1;
+           return {ctor: "_Tuple2"
+                  ,_0: _U.update(model,{questions: qs})
+                  ,_1: $Effects.batch(es)};
+         default: return {ctor: "_Tuple2",_0: model,_1: $Effects.none};}
    });
    var Submission = F3(function (a,b,c) {
       return {ctor: "Submission",_0: a,_1: b,_2: c};
@@ -12328,37 +12804,29 @@ Elm.Lesson1.make = function (_elm) {
       address,
       A3(Submission,qid,bid,mNumVal));
    });
-   var viewQuestion = F2(function (address,question) {
-      var _p2 = function () {
-         var _p3 = question.nums;
-         if (_p3.ctor === "::" && _p3._1.ctor === "::") {
+   var viewQuestion = F2(function (address,_p14) {
+      var _p15 = _p14;
+      var _p19 = _p15.question;
+      var _p16 = function () {
+         var _p17 = _p19.nums;
+         if (_p17.ctor === "::" && _p17._1.ctor === "::") {
                return {ctor: "_Tuple2"
-                      ,_0: $Basics.toString(_p3._0)
-                      ,_1: $Basics.toString(_p3._1._0)};
+                      ,_0: $Basics.toString(_p17._0)
+                      ,_1: $Basics.toString(_p17._1._0)};
             } else {
                return {ctor: "_Tuple2",_0: "",_1: ""};
             }
       }();
-      var s1 = _p2._0;
-      var s2 = _p2._1;
+      var s1 = _p16._0;
+      var s2 = _p16._1;
       var g1 = function () {
-         var _p4 = question.boxes;
-         if (_p4.ctor === "::" && _p4._0.ctor === "_Tuple2") {
-               return _p4._0._1.guess;
+         var _p18 = _p19.boxes;
+         if (_p18.ctor === "::" && _p18._0.ctor === "_Tuple2") {
+               return _p18._0._1.guess;
             } else {
                return $Maybe.Nothing;
             }
       }();
-      var _p5 = function () {
-         var _p6 = question.nums;
-         if (_p6.ctor === "::" && _p6._1.ctor === "::") {
-               return {ctor: "_Tuple2",_0: _p6._0,_1: _p6._1._0};
-            } else {
-               return {ctor: "_Tuple2",_0: 0,_1: 0};
-            }
-      }();
-      var n1 = _p5._0;
-      var n2 = _p5._1;
       return A2($Html.div,
       _U.list([$Html$Attributes.$class("question")]),
       _U.list([A2($Html.div,
@@ -12368,33 +12836,25 @@ Elm.Lesson1.make = function (_elm) {
                       A2($Basics._op["++"]," + ",A2($Basics._op["++"],s2," = "))))
                       ,A2($Html.input,
                       _U.list([$Html$Attributes.type$("text")
-                              ,$Html$Attributes.$class(A2($Question.completionClass,
-                              question,
-                              1))
+                              ,$Html$Attributes.$class(A2($Question.completionClass,_p19,1))
                               ,A3($Html$Events.on,
                               "change",
                               $Html$Events.targetValue,
-                              A3(targetToSubmission,address,question.id,1))]),
+                              A3(targetToSubmission,address,_p19.id,1))]),
                       _U.list([]))
                       ,A2($Html.button,
                       _U.list([$Html$Attributes.$class(A2($Basics._op["++"],
                       "btn btn-side ",
-                      A2($Question.completionClass,question,1)))]),
+                      A2($Question.completionClass,_p19,1)))]),
                       _U.list([A3($Html.node,
                       "i",
                       _U.list([$Html$Attributes.$class(A2($Question.faClass,
-                      question,
+                      _p19,
                       1))]),
                       _U.list([]))]))]))
-              ,A2($Html.div,
-              _U.list([$Html$Attributes.$class("bars")]),
-              _U.list([$Html.fromElement(A2($NumberLine.barCollage,
-              {height: 10,width: 350},
-              _U.list([_U.list([{ctor: "_Tuple2",_0: n1,_1: $Color.red}
-                               ,{ctor: "_Tuple2",_0: n2,_1: $Color.green}])
-                      ,_U.list([{ctor: "_Tuple2"
-                                ,_0: A2($Maybe.withDefault,0,g1)
-                                ,_1: $Color.blue}])])))]))]));
+              ,A2($NumberLine.view,
+              A2($Signal.forwardTo,address,RelayNumberLine(_p19.id)),
+              _p15.numberline)]));
    });
    var view = F2(function (address,model) {
       return A2($Html.div,
@@ -12404,20 +12864,49 @@ Elm.Lesson1.make = function (_elm) {
       A2($List.map,viewQuestion(address),model.questions)));
    });
    var init = function () {
+      var pairToLine = function (l) {
+         var _p20 = l;
+         if (_p20.ctor === "::" && _p20._1.ctor === "::") {
+               return _U.list([_U.list([{ctor: "_Tuple2"
+                                        ,_0: $NumberLine.Constant({value: _p20._0})
+                                        ,_1: $Color.red}
+                                       ,{ctor: "_Tuple2"
+                                        ,_0: $NumberLine.Constant({value: _p20._1._0})
+                                        ,_1: $Color.green}])
+                              ,_U.list([{ctor: "_Tuple2"
+                                        ,_0: $NumberLine.Variable({name: "x"
+                                                                  ,value: $Maybe.Nothing
+                                                                  ,prevValue: $Maybe.Nothing})
+                                        ,_1: $Color.blue}])]);
+            } else {
+               return _U.list([]);
+            }
+      };
       var numPairs = _U.list([_U.list([2,3])
                              ,_U.list([5,7])
                              ,_U.list([40,2])]);
+      var numberlines = A2($List.map,
+      function (np) {
+         return A2($NumberLine.init,
+         {height: 10,width: 350},
+         pairToLine(np));
+      },
+      numPairs);
       var validate = F2(function (nums,guess) {
-         var _p7 = nums;
-         if (_p7.ctor === "::" && _p7._1.ctor === "::") {
-               return $Maybe.Just(_U.eq(_p7._0 + _p7._1._0,guess));
+         var _p21 = nums;
+         if (_p21.ctor === "::" && _p21._1.ctor === "::") {
+               return $Maybe.Just(_U.eq(_p21._0 + _p21._1._0,guess));
             } else {
                return $Maybe.Nothing;
             }
       });
-      return {questions: A2($Question.mkQBatch,
-             _U.list([validate]),
-             numPairs)
+      var questions = A2($Question.mkQBatch,
+      _U.list([validate]),
+      numPairs);
+      return {questions: A3($List.map2,
+             F2(function (q,nl) {    return {question: q,numberline: nl};}),
+             questions,
+             numberlines)
              ,qAt: 1
              ,completed: false};
    }();
@@ -12433,15 +12922,20 @@ Elm.Lesson1.make = function (_elm) {
    var Model = F3(function (a,b,c) {
       return {questions: a,qAt: b,completed: c};
    });
+   var QuestionState = F2(function (a,b) {
+      return {question: a,numberline: b};
+   });
    return _elm.Lesson1.values = {_op: _op
+                                ,QuestionState: QuestionState
                                 ,Model: Model
                                 ,init: init
                                 ,Submission: Submission
+                                ,RelayNumberLine: RelayNumberLine
                                 ,SendCompletion: SendCompletion
                                 ,NoOp: NoOp
                                 ,completed: completed
+                                ,updateNumberLines: updateNumberLines
                                 ,update: update
-                                ,taskToNone: taskToNone
                                 ,targetToSubmission: targetToSubmission
                                 ,viewQuestion: viewQuestion
                                 ,view: view

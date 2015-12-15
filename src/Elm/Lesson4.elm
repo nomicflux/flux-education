@@ -17,8 +17,12 @@ import Question exposing (..)
 
 -- Model
 
+type alias QuestionState = { question : Question
+                           , numberline : NumberLine.State
+                           }
+
 type alias Model =
-  { questions : List Question
+  { questions : List QuestionState
   , qAt : QuestionID
   , completed : Bool
   }
@@ -32,8 +36,21 @@ init =
         x :: y :: z :: _ -> Just ( x + y == guess )
         _ -> Nothing
     numTriads = [ [2,3,4], [5,7,9], [40,1,1] ]
+    triadToLine l =
+      case l of
+        (x :: y :: z :: _) -> [ [ (mkConstant x, red),  (mkConstant y, green) ]
+                         , [ (mkVar "x", blue) ]
+                         , [ (mkVar "x", blue), (mkConstant z, brown) ]
+                         , [ (mkConstant (x + y + z), purple) ]
+                         ]
+        _ -> [ ]
+    numberlines = List.map (\ np -> NumberLine.init
+                                    { height = 10, width = 350 }
+                                    (triadToLine np)
+                           ) numTriads
+    questions = mkQBatch [ validate ] numTriads
   in
-    { questions = mkQBatch [validate] numTriads
+    { questions = List.map2 (\ q nl -> {question=q, numberline=nl}) questions numberlines
     , qAt = 1
     , completed = False
     }
@@ -41,6 +58,7 @@ init =
 -- Update
 
 type Action = Submission (QuestionID, BoxID) (Maybe Int)
+            | RelayNumberLine QuestionID NumberLine.Action
             | SendCompletion
 
 port signalCompletion : Signal Bool
@@ -49,18 +67,44 @@ port signalCompletion = completed.signal
 completed : Signal.Mailbox Bool
 completed = Signal.mailbox False
 
+updateNumberLines : ( Question ->  Question )
+                  -> ( NumberLine.State -> ( NumberLine.State, Effects NumberLine.Action ) )
+                  -> QuestionID
+                  -> List QuestionState
+                  -> (List QuestionState, List (Effects Action))
+updateNumberLines qFunc nlFunc wanted pairs =
+  let
+    updateBoth {question, numberline} =
+      if question.id == wanted
+      then
+        let
+          (newNL, nlEffect) = nlFunc numberline
+        in
+          ({question=qFunc question, numberline=newNL}, (question.id, nlEffect))
+      else
+        ({question=question, numberline=numberline}, (question.id, Effects.none))
+
+    allUpdate = List.map updateBoth pairs
+    updatedQuestions = List.map fst allUpdate
+    updatedEffects = List.map (snd >> (\ (i, e) -> Effects.map (RelayNumberLine i) e)) allUpdate
+  in
+    ( updatedQuestions, updatedEffects )
+
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
     SendCompletion -> ({model | completed = True}, Effects.none)
-    Submission ids mval ->
+    Submission (qid, bid) mval ->
       case mval of
         Nothing -> (model, Effects.none)
         Just val ->
           let
-            updatedQuestions = List.map (updateQuestion ids val) model.questions
+            updateThisQ = updateQuestion (qid, bid) val
+            updateThisV s = NumberLine.update s (NumberLine.UpdateVariable "x" val)
 
-            newestCompletion = findLatestAnswered updatedQuestions
+            (qs, es) = updateNumberLines updateThisQ updateThisV qid model.questions
+
+            newestCompletion = findLatestAnswered (List.map (.question) qs)
             completion = newestCompletion + 1 > List.length model.questions
 
             completionAction = if completion
@@ -69,10 +113,17 @@ update action model =
                                    |> Task.map (always SendCompletion)
                                    |> Effects.task
                                else Effects.none
+          in
+            ( { model | questions = qs, qAt = newestCompletion + 1 }
+            , Effects.batch (completionAction :: es)
+            )
+    RelayNumberLine qid nlEffect ->
+      let
+        fireEffect numberline = NumberLine.update numberline nlEffect
+
+        (qs, es) = updateNumberLines identity fireEffect qid model.questions
       in
-        ( { model | questions = updatedQuestions, qAt = newestCompletion + 1 }
-        , completionAction
-        )
+        ( { model | questions = qs }, Effects.batch es )
 
 -- View
 
@@ -83,15 +134,13 @@ targetToSubmission address ids val =
   in
     Signal.message address (Submission ids mNumVal)
 
-viewQuestion : Signal.Address Action -> Question -> Html
-viewQuestion address question =
+viewQuestion : Signal.Address Action -> QuestionState -> Html
+viewQuestion address {question, numberline} =
   let
     (n1, n2, n3) = case question.nums of
-                 x :: y :: z :: _ -> (x, y, z)
-                 _ -> (0, 0, 0)
-    g1 = case question.boxes of
-           (_, box) :: _ -> box.guess
-           _ -> Nothing
+                     x :: y :: z :: _ -> (x, y, z)
+                     _ -> (0, 0, 0)
+
     (s1, s2, s3) = case question.nums of
                      x :: y :: z :: _ -> (toString x, toString y, toString z)
                      _ -> ("", "", "")
@@ -125,14 +174,7 @@ viewQuestion address question =
                                   ]
                           ]
                   ]
-          , Html.div
-                  [ Html.Attributes.class "bars" ]
-                  [ barCollage { height = 10, width = 350 }
-                                 [ [ (n1, red),  (n2, green) ]
-                                 , [ (Maybe.withDefault 0 g1, blue) ]
-                                 , [ (Maybe.withDefault 0 g1, blue), (n3, brown) ]
-                                 , [ (n1 + n2 + n3, purple) ]
-                                 ] |> Html.fromElement ]
+          , NumberLine.view (Signal.forwardTo address (RelayNumberLine question.id)) numberline
       ]
 
 

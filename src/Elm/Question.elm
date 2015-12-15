@@ -6,29 +6,30 @@ import Maybe exposing (withDefault)
 
 type alias QuestionID = Int
 
-type alias BoxID = Int
+type alias BoxID = String
 
 type alias InputBox =
   { completed : Bool
   , attempted : Bool
   , validation : Int -> Maybe Bool
   , guess : Maybe Int
+  , id : BoxID
   }
 
 type alias Question =
   { nums : List Int
-  , boxes : List ( BoxID, InputBox )
+  , boxes : List InputBox
   , id : QuestionID
   }
 
 completionClass : Question -> BoxID -> String
 completionClass question bid =
   let
-    mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
+    mbox = List.head (List.filter (\ b -> b.id == bid) question.boxes)
   in
     case mbox of
       Nothing -> ""
-      Just (_, box) ->
+      Just box ->
         if box.completed
         then
           "completed"
@@ -42,11 +43,11 @@ completionClass question bid =
 faClass : Question -> BoxID -> String
 faClass question bid =
   let
-    mbox = List.head (List.filter (\ (id, _) -> id == bid) question.boxes)
+    mbox = List.head (List.filter (\ b -> b.id == bid) question.boxes)
   in
     case mbox of
       Nothing -> ""
-      Just (_, box) ->
+      Just box ->
         if box.completed
         then
           "fa fa-check-square-o"
@@ -57,27 +58,26 @@ faClass question bid =
           else
             "fa fa-square-o"
 
-mkBox : BoxID -> (Int -> Maybe Bool) -> (BoxID, InputBox)
-mkBox bid val = (bid + 1,
-                 { completed = False
-                  , attempted = False
-                  , validation = val
-                  , guess = Nothing
-                 }
-                )
+mkBox : BoxID -> (Int -> Maybe Bool) -> InputBox
+mkBox bid val = { completed = False
+                , attempted = False
+                , validation = val
+                , guess = Nothing
+                , id = bid
+                }
 
-mkQuestion : List (List Int -> Int -> Maybe Bool) -> QuestionID -> List Int -> Question
+mkQuestion : List (BoxID, (List Int) -> Int -> Maybe Bool) -> QuestionID -> List Int -> Question
 mkQuestion validations qid nums =
   let
-    fullValidations : List (Int -> Maybe Bool)
-    fullValidations = List.map (\ f -> f nums) validations
+    fullValidations : List (BoxID, Int -> Maybe Bool)
+    fullValidations = List.map (\ (var, f) -> (var, f nums)) validations
   in
     { nums = nums
-    , boxes = List.indexedMap mkBox fullValidations
+    , boxes = List.map (uncurry mkBox) fullValidations
     , id = qid + 1
     }
 
-mkQBatch : List (List Int -> Int -> Maybe Bool) -> List (List Int) -> List Question
+mkQBatch : List (BoxID, (List Int) -> Int -> Maybe Bool) -> List (List Int) -> List Question
 mkQBatch validations nums =
   List.indexedMap
       (mkQuestion validations)
@@ -86,13 +86,13 @@ mkQBatch validations nums =
 validateBox : InputBox -> Int -> Bool
 validateBox box guess = withDefault False (box.validation guess)
 
-updateBox : BoxID -> Int -> ( BoxID, InputBox ) -> ( BoxID, InputBox )
-updateBox wantedBid val (thisBid, box) =
-  if thisBid == wantedBid
+updateBox : BoxID -> Int -> InputBox -> InputBox
+updateBox wantedBid val box =
+  if box.id == wantedBid
   then
-    (thisBid, { box | attempted = True, completed = validateBox box val, guess = Just val })
+    { box | attempted = True, completed = validateBox box val, guess = Just val }
   else
-    (thisBid, box)
+    box
 
 updateQuestion : ( QuestionID, BoxID ) -> Int -> Question -> Question
 updateQuestion (qid, bid) val question =
@@ -103,7 +103,7 @@ updateQuestion (qid, bid) val question =
     question
 
 boxesComplete : Question -> Bool
-boxesComplete q = List.all (\ (_, b) -> b.completed ) q.boxes
+boxesComplete q = List.all (\ b -> b.completed ) q.boxes
 
 findLatestAnswered : List Question -> QuestionID
 findLatestAnswered qs = qs

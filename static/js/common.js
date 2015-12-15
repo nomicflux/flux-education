@@ -1,6 +1,10 @@
 "use strict"
 var console, $, Elm;
 
+function goBack() {
+  window.history.back();
+}
+
 function startApp(module) {
   var elmApp = document.getElementById("elmApp");
   var elmObj = Elm[module];
@@ -20,12 +24,20 @@ function loadNextFiles(lessonId) {
   var url = "/lessons/requiredby/" + String(lessonId);
  // console.log("Trying to get: ", lessonId, url);
   $.get(url, function(lessons, status) {
-    var html = "<div id='nowCompleted' class='hidden'><ul>";
-    for(var i = 0, _is = lessons.length; i < _is; i++) {
-      html += lessonToEl(lessons[i]);
+    var html = "<div id='nowCompleted' class='hidden'>";
+    if(lessons.length != 0) {
+      html += "<section><h4>Up next:</h4><ul>";
+      for(var i = 0, _is = lessons.length; i < _is; i++) {
+        html += lessonToEl(lessons[i]);
+      }
+      html += "</ul></section>";
+    } else {
+      html += "<section><h4>You've reached the current end of that branch!</h4></section>";
     }
-    html += "</ul></div>";
-    html += "<div id='notCompletedYet'>Complete all questions in order to continue.</div>";
+    html += "</div><div id='notCompletedYet'>Complete all questions in order to continue.</div>";
+    if(lessonId > 3) {
+      html += "<section><h4>Take a different path?</h4><a onClick='goBack()'>Go Back</a></section>";
+    }
     completionDiv.html(html);
   });
 }
