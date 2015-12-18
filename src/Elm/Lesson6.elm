@@ -41,8 +41,8 @@ init =
         (x :: y :: _) -> [ [ (Variable {name="x", value=Nothing, prevValue=Nothing}, blue), (Constant {value=x}, red) ]
                          , [ (Constant {value=y}, green) ]
                          , []
-                         , [ (Constant {value=y}, green), (Constant {value=(-x)}, lightCharcoal) ]
                          , [ (Variable {name="x", value=Nothing, prevValue=Nothing}, blue) ]
+                         , [ (Constant {value=y}, green), (Constant {value=(-x)}, lightCharcoal) ]
                          ]
         _ -> [ ]
     numberlines = List.map (\ np -> NumberLine.init
