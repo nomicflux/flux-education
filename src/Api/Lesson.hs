@@ -1,18 +1,19 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api.Lesson where
 
-import Control.Monad.Reader (ReaderT, runReaderT, lift)
-import Control.Monad.Trans.Either (EitherT, left)
-import qualified Database.Esqueleto as E
-import           Database.Esqueleto ((^.))
-import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
-import Data.Int (Int64)
-import Servant
+import           Control.Monad.Reader        (ReaderT, lift, runReaderT)
+import           Control.Monad.Trans.Either  (EitherT, left)
+import           Data.Int                    (Int64)
+import           Database.Esqueleto          ((^.))
+import qualified Database.Esqueleto          as E
+import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
+                                              selectList, toSqlKey, (==.))
+import           Servant
 
-import Models
-import Api.App
+import           Api.App
+import           Models
 
 lessonAPI :: Proxy LessonAPI
 lessonAPI = Proxy

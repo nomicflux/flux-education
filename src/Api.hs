@@ -1,21 +1,21 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api where
 
-import Control.Monad.Reader (runReaderT)
-import Control.Monad.Trans.Either (EitherT)
-import Network.Wai (Application)
+import           Control.Monad.Reader       (runReaderT)
+import           Control.Monad.Trans.Either (EitherT)
+import           Network.Wai                (Application)
 --import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
 --import Data.Int (Int64)
-import Servant
+import           Servant
 
-import Config (Config(..))
+import           Config                     (Config (..))
 --import Models
-import Api.User
-import Api.Lesson
-import Api.App
-import Api.Page
+import           Api.App
+import           Api.Lesson
+import           Api.Page
+import           Api.User
 
 type HandledAPI = "users" :> UserAPI
                   :<|> "lessons" :> LessonAPI

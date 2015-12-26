@@ -12,6 +12,7 @@ import Signal
 import Maybe exposing (withDefault)
 import Html exposing (Html)
 import Html.Attributes
+import Terms exposing (Term)
 
 -- Model
 
@@ -25,13 +26,6 @@ type alias Dimensions =
   { height : Int
   , width : Int
   }
-
-type Term = Constant { value : Int }
-          | Variable
-            { name : String
-            , value : Maybe Int
-            , prevValue : Maybe Int
-            }
 
 type alias AnimationState = Maybe {prevTime : Time, elapsedTime: Time}
 
