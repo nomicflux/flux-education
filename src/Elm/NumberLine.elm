@@ -12,7 +12,7 @@ import Signal
 import Maybe exposing (withDefault)
 import Html exposing (Html)
 import Html.Attributes
-import Terms exposing (Term)
+import Terms exposing (Term(..), VarName)
 
 -- Model
 
@@ -29,7 +29,7 @@ type alias Dimensions =
 
 type alias AnimationState = Maybe {prevTime : Time, elapsedTime: Time}
 
-type alias State =
+type alias NLState =
   { values : List (List (Term, Color))
   , collageSize : Dimensions
   , animationState : AnimationState
@@ -38,20 +38,28 @@ type alias State =
 mkConstant : Int -> Term
 mkConstant c = Constant { value = c }
 
-mkVar : String -> Term
+mkVar : VarName -> Term
 mkVar name = Variable { name = name, value = Nothing, prevValue = Nothing }
 
-init : Dimensions -> List (List (Term, Color)) -> State
-init dims nums =
-  { values = nums
-  , collageSize = dims
-  , animationState = Nothing
-  }
+defaultDims : Dimensions
+defaultDims = { height = 10, width = 350 }
+
+-- init : Dimensions -> List (List (Term, Color)) -> NLState
+-- init dims nums =
+--   { values = nums
+--   , collageSize = dims
+--   , animationState = Nothing
+--   }
+
+defaultColors : List Color
+defaultColors = [ red, yellow, orange, green, blue, purple, black ]
+
+init :  
 
 -- Update
 
-type Action = UpdateVariable String Int
-            | Tick Time
+type NLAction = UpdateVariable VarName Int
+             | Tick Time
 
 moveBar : Float -> Float -> Animation
 moveBar start stop =
@@ -78,7 +86,7 @@ updateVar oldTerm newTerm =
 duration : Time
 duration = 1 * second
 
-update : State -> Action -> (State, Effects Action)
+update : NLState -> NLAction -> (NLState, Effects NLAction)
 update state action =
   case action of
     Tick clockTime ->
@@ -176,7 +184,7 @@ termToInt term =
     Constant c -> c.value
     Variable v -> withDefault 0 v.value
 
-view : Signal.Address Action -> State -> Html
+view : Signal.Address NLAction -> NLState -> Html
 view address state =
  Html.div
         [ Html.Attributes.class "bars" ]
