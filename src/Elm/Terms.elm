@@ -1,9 +1,10 @@
 module Terms where
 
 import Maybe exposing (oneOf, withDefault)
-import Combine exposing (Parser, skip, string, regex)
+import Combine exposing (Parser(..), skip, string, regex)
 import Combine.Infix exposing (..)
 import String exposing (toInt)
+import Debug
 
 type alias VarName = String
 
@@ -39,8 +40,6 @@ type Equation = Equation
 
 type alias System = List Equation
 
-colorTerms : List Color -> System 
-
 newVariable : VarName -> Term
 newVariable name = Variable { name = name, value = Nothing, prevValue = Nothing }
 
@@ -48,11 +47,11 @@ newBox : VarName -> VarBox
 newBox name = { name = name, currentValue = Nothing }
 
 constantParser : Parser Term
-constantParser = (String.toInt >> Result.toMaybe >> withDefault 0 >> (\k -> Constant {value=k})) <$>
-                 (regex "[0-9]+")
+constantParser = ((String.toInt >> Result.toMaybe >> withDefault 0 >> (\k -> Constant {value=k})) <$>
+                 (regex "[0-9]+"))
 
 variableParser : Parser Term
-variableParser = newVariable <$> (regex "[a-zA-Z][a-zA-Z0-9_]*")
+variableParser = (newVariable <$> (regex "[a-zA-Z][a-zA-Z0-9_]*"))
 
 termParser : Parser Term
 termParser = (constantParser <|> variableParser)
@@ -67,43 +66,46 @@ opParser =
                "/" -> Divide
                _   -> NoOp
   in
-    toOp <$> (regex "[\\+\\-\\*\\/]")
+    (toOp <$> (regex "[\\+\\-\\*\\/]"))
 
 formulaParser : Parser Formula
 formulaParser =
   let
-    singleTerm = SimpleT <$> termParser
-    spaces = string " " |> skip
-    allTerms = TreeT <$>
-               formulaParser <*>
-               (spaces *> opParser <* spaces) <*>
-               formulaParser
+    singleTerm = (SimpleT <$> termParser)
+    spaces = Combine.many (string " ")
+    allTerms = Combine.rec (\() -> TreeT <$>
+                     singleTerm <*>
+                     (spaces *> opParser <* spaces) <*>
+                     singleTerm)
   in
-    singleTerm <|> allTerms
+    Combine.rec (\() -> allTerms <|> singleTerm)
 
 inputParser : Parser Equation
-inputParser = (\name -> Input { lhs = SimpleT ( newVariable name ), input = newBox name }) <$>
-              regex "^\\?(.+)$"
+inputParser = ((\name -> Input { lhs = SimpleT ( newVariable name ), input = newBox name }) <$>
+              (string "?" *> regex "(.+)$"))
 
 plainEqParser : Parser Equation
 plainEqParser =
   let
-    spaces = string " " |> skip
+    spaces = Combine.many (string " ")
     middle = spaces *> string "=" *> spaces
   in
-    (\l r -> Equation {lhs = l, rhs = r}) <$>
-                                          formulaParser <* middle <*>
-                                          formulaParser
-
-
+    ((\l r -> Equation {lhs = l, rhs = r}) <$>
+                                          (formulaParser) <*>
+                                          (middle *> formulaParser))
+ 
 equationParser : Parser Equation
-equationParser = inputParser <|> plainEqParser
+equationParser = (plainEqParser <|> inputParser)
 
-takeString : String -> Maybe Equation
-takeString s =
-  case Combine.parse (equationParser <* Combine.end) s of
+stringToSystem : String -> Maybe Equation
+stringToSystem s =
+  case Combine.parse (equationParser) s of
     (Combine.Done eq, _) -> Just eq
-    _ -> Nothing
+    (Combine.Fail f, x) -> Debug.log "Failure" (f,x) |> always Nothing
+
+nullEq : Equation
+nullEq = Equation { lhs = SimpleT (Constant {value = 0})
+                  , rhs = SimpleT (Constant {value = 0})}
 
 evalTerm : Term -> List (VarName, Maybe Int) -> Maybe Int
 evalTerm term vals =

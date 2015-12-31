@@ -7,6 +7,7 @@ import Html.Events
 import String
 import Terms exposing (Equation(..), System, VarName, VarBox, Operation(..), Term(..), Formula(..), checkSystem)
 import Maybe exposing (withDefault)
+-- import Debug
 
 -- Model
 
@@ -46,13 +47,14 @@ mkQuestion sys =
 
 -- Update
 
-type QAction = UpdateBox System BoxID Int
+type QAction = UpdateBox System BoxID (Maybe Int)
              | Submission VarName (Maybe Int)
 
-update : QState -> QAction -> QState
-update state action =
+update : QAction -> QState -> QState
+update action state =
   let
     fullUpdateBox = updateBox state
+    -- _ = (state, action) |> Debug.log "Updating Questions"
   in
   case action of
     UpdateBox sys bid val ->
@@ -62,14 +64,15 @@ update state action =
         { state | equations = sys, boxes = newBoxes }
     Submission name mval -> state
 
-validateBox : QState -> InputBox -> Int -> Bool
+validateBox : QState -> InputBox -> Maybe Int -> Bool
 validateBox state box val = False-- checkSystem state.equations
+                            -- Implement!
 
-updateBox : QState -> BoxID -> Int -> InputBox -> InputBox
-updateBox state wantedBid val box =
+updateBox : QState -> BoxID -> Maybe Int -> InputBox -> InputBox
+updateBox state wantedBid mval box =
   if box.id == wantedBid
   then
-    { box | attempted = True, completed = validateBox state box val, guess = Just val }
+    { box | attempted = True, completed = validateBox state box mval, guess = mval }
   else
     box
 
@@ -129,11 +132,11 @@ termToHtml term =
   case term of
     Constant { value } ->
       Html.span
-        [ Html.Attributes.class "term-constant" ]
+        [ Html.Attributes.class "term term-constant" ]
         [ value |> toString |> Html.text ]
     Variable { name } ->
       Html.span
-          [ Html.Attributes.class "term-variable" ]
+          [ Html.Attributes.class "term term-variable" ]
           [ Html.text name ]
 
 opToHtml : Operation -> Html
@@ -147,7 +150,7 @@ opToHtml op =
           NoOp -> "?"
   in
     Html.span
-        [ Html.Attributes.class "formula-operation" ]
+        [ Html.Attributes.class "operation" ]
         [ Html.text t ]
 
 formulaToHtml : Formula -> Html
@@ -155,11 +158,11 @@ formulaToHtml form =
   case form of
     SimpleT term ->
       Html.span
-          [ Html.Attributes.class "formula-simple" ]
+          [ Html.Attributes.class "formula formula-simple" ]
           [ termToHtml term ]
     TreeT form1 op form2 ->
       Html.span
-          [ Html.Attributes.class "formula-tree" ]
+          [ Html.Attributes.class "formula formula-tree" ]
           [ formulaToHtml form1
           , opToHtml op
           , formulaToHtml form2
@@ -188,7 +191,7 @@ boxToHtml address state vbox =
                     , completionClass box |> Html.Attributes.class
                     , Html.Events.on "change"
                           Html.Events.targetValue
-                          (targetToSubmission address (\x -> Submission box.id x))
+                          (targetToSubmission address (\x -> UpdateBox state.equations box.id x))
                     ]
                     [ ]
                   , Html.button
@@ -200,22 +203,22 @@ boxToHtml address state vbox =
                   ]
   in
     Html.span
-          [ Html.Attributes.class "formula-input" ]
+          [ Html.Attributes.class "formula formula-input" ]
           boxHtml
 
 eqToHtml : Signal.Address QAction -> QState -> Equation -> Html
 eqToHtml address state eq =
   case eq of
     Equation e ->
-      Html.span
-          [ Html.Attributes.class "equation-plain" ]
+      Html.div
+          [ Html.Attributes.class "equation equation-plain" ]
           [ formulaToHtml e.lhs
           , Html.text " = "
           , formulaToHtml e.rhs
           ]
     Input i ->
-      Html.span
-          [ Html.Attributes.class "equation-input" ]
+      Html.div
+          [ Html.Attributes.class "equation equation-input" ]
           [ formulaToHtml i.lhs
           , Html.text " = "
           , boxToHtml address state i.input

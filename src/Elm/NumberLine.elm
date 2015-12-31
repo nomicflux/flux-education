@@ -12,7 +12,9 @@ import Signal
 import Maybe exposing (withDefault)
 import Html exposing (Html)
 import Html.Attributes
-import Terms exposing (Term(..), VarName)
+import Dict exposing (Dict)
+import Terms exposing (Term(..), VarName, Formula(..), Equation(..), System, Operation(..))
+--import Debug
 
 -- Model
 
@@ -29,8 +31,14 @@ type alias Dimensions =
 
 type alias AnimationState = Maybe {prevTime : Time, elapsedTime: Time}
 
+type alias ColoredTerm =
+                       { term : Term
+                       , color : Color
+                       , negated : Bool
+                       }
+
 type alias NLState =
-  { values : List (List (Term, Color))
+  { values : List (List ColoredTerm)
   , collageSize : Dimensions
   , animationState : AnimationState
   }
@@ -44,6 +52,41 @@ mkVar name = Variable { name = name, value = Nothing, prevValue = Nothing }
 defaultDims : Dimensions
 defaultDims = { height = 10, width = 350 }
 
+type alias ColorRecord =
+                { colors : List Color
+                , assigned : Dict VarName Color
+                }
+
+mkRec : List Color -> ColorRecord
+mkRec cols = { colors = cols, assigned = Dict.empty }
+
+getValue : ColoredTerm -> Int
+getValue ct =
+  case ct.term of
+    Constant k -> if ct.negated then (-1)*k.value else k.value
+    Variable v ->
+      let
+        base = withDefault 0 v.value
+      in
+        if ct.negated then (-1)*base else base
+
+getPrevValue : ColoredTerm -> Int
+getPrevValue ct =
+  case ct.term of
+    Constant k -> getValue ct
+    Variable v ->
+      let
+        base = withDefault 0 v.prevValue
+      in
+        if ct.negated then (-1)*base else base
+
+setValue : ColoredTerm -> Maybe Int -> ColoredTerm
+setValue cterm newVal =
+  case cterm.term of
+    Constant _ -> cterm
+    Variable v -> {cterm | term = Variable { v | value = newVal, prevValue = v.value}}
+
+
 -- init : Dimensions -> List (List (Term, Color)) -> NLState
 -- init dims nums =
 --   { values = nums
@@ -51,14 +94,90 @@ defaultDims = { height = 10, width = 350 }
 --   , animationState = Nothing
 --   }
 
-defaultColors : List Color
-defaultColors = [ red, yellow, orange, green, blue, purple, black ]
+lookupColor : Term -> ColorRecord -> (Maybe Color, ColorRecord)
+lookupColor term colorRec =
+  let
+    (nextColor, rstColors) = case colorRec.colors of
+                               [] -> (Nothing, [])
+                               (x :: xs) -> (Just x, xs) 
+  in
+    case term of
+      Constant k -> (nextColor, { colorRec | colors = rstColors})
+      Variable x -> case Dict.get x.name colorRec.assigned of
+                      Nothing -> (nextColor
+                                 , {colorRec | colors = rstColors
+                                   , assigned = Dict.insert x.name
+                                                (withDefault Color.white nextColor)
+                                                colorRec.assigned})
+                      Just col-> (Just col, colorRec)
 
-init :  
+defaultColors : List Color
+defaultColors = [ Color.red
+                , Color.yellow
+                , Color.orange
+                , Color.green
+                , Color.blue
+                , Color.purple
+                , Color.black ]
+
+colorTerm : Term -> Bool-> ColorRecord -> (ColoredTerm, ColorRecord)
+colorTerm term negated rec =
+  let
+    (mcol, newRec) = lookupColor term rec
+  in
+    ({color = withDefault Color.white mcol, term = term, negated = negated}
+    , newRec)
+
+colorFormula : Formula -> Bool -> ColorRecord -> (List ColoredTerm, ColorRecord)
+colorFormula form negated rec =
+  case form of
+    SimpleT t ->
+      let (ct, cr) = colorTerm t negated rec
+      in ([ ct ], cr)
+    TreeT form1 op form2 ->
+      let
+        (cts1, cr1) = colorFormula form1 False rec
+        (cts2, cr2) = colorFormula form2 (op == Subtract) cr1
+      in
+        (cts1 ++ cts2, cr2)
+
+colorEquation : ColorRecord -> Equation -> (List (List ColoredTerm), ColorRecord)
+colorEquation rec eq =
+  case eq of
+    Input _ -> ([[]], rec)
+    Equation e ->
+      let
+        (ctsl, crl) = colorFormula e.lhs False rec
+        (ctsr, crr) = colorFormula e.rhs False crl
+      in
+        ([ctsl, ctsr], crr)
+
+colorSystem : System -> List Color -> List (List ColoredTerm)
+colorSystem sys colors =
+  let
+    coloring = colorEquation (mkRec colors)
+    (res, _) = List.foldl (\eq (accLst, accRec) ->
+                             let (l, newRec) = colorEquation accRec eq
+                             in (l :: accLst, newRec))
+                          ([], mkRec colors)
+                          sys
+    withSpaces = List.intersperse [[]] res
+  in
+    List.concat withSpaces
+
+init : List Color -> System -> NLState
+init colors sys =
+  let
+    vals = colorSystem sys colors
+  in
+    { values = vals
+    , collageSize = defaultDims
+    , animationState = Nothing
+    }
 
 -- Update
 
-type NLAction = UpdateVariable VarName Int
+type NLAction = UpdateVariable VarName (Maybe Int)
              | Tick Time
 
 moveBar : Float -> Float -> Animation
@@ -69,19 +188,16 @@ moveBar start stop =
   else
     animation 0 |> from start |> to stop |> ease easeOutElastic
 
-updateVar : Term -> Term -> Term
-updateVar oldTerm newTerm =
-  case oldTerm of
-    Constant {value} -> oldTerm
-    Variable oldVal ->
-      case newTerm of
-        Constant x -> oldTerm
-        Variable newVal ->
-          if oldVal.name == newVal.name
+updateVar : (VarName, Maybe Int) -> ColoredTerm -> ColoredTerm
+updateVar (name, mval) oldTerm =
+  case oldTerm.term of
+    Constant _ -> oldTerm
+    Variable oldVar ->
+          if oldVar.name == name
           then
-            Variable {name=oldVal.name, value=newVal.value, prevValue=oldVal.value}
+            setValue oldTerm mval
           else
-            Variable {name=oldVal.name, value=oldVal.value, prevValue=oldVal.value}
+            oldTerm
 
 duration : Time
 duration = 1 * second
@@ -89,43 +205,42 @@ duration = 1 * second
 update : NLState -> NLAction -> (NLState, Effects NLAction)
 update state action =
   case action of
-    Tick clockTime ->
-      let
-        newElapsedTime =
-          case state.animationState of
-            Nothing -> 0
-            Just {elapsedTime, prevTime} ->
-              elapsedTime + (clockTime - prevTime)
-      in
-        if newElapsedTime > duration then
-          ( { state | animationState = Just { elapsedTime = duration, prevTime = clockTime }}, Effects.none )
-        else
-          ( { state | animationState = Just { elapsedTime = newElapsedTime, prevTime = clockTime } }
-          , Effects.tick Tick
-          )
-    UpdateVariable name val ->
-      let
-        updatedVars = List.map (List.map
-                                      (\ (t,c) ->
-                                         (updateVar t (Variable {name=name, value=Just val, prevValue=Nothing}), c)
-                                      )) state.values
-      in
-        ( { state | values = updatedVars, animationState = Nothing }, Effects.tick Tick)
+       Tick clockTime ->
+         let
+           newElapsedTime =
+             case state.animationState of
+               Nothing -> 0
+               Just {elapsedTime, prevTime} ->
+                 elapsedTime + (clockTime - prevTime)
+         in
+           if newElapsedTime > duration then
+             ( { state | animationState = Just { elapsedTime = duration, prevTime = clockTime }}, Effects.none )
+           else
+             ( { state | animationState = Just { elapsedTime = newElapsedTime, prevTime = clockTime } }
+             , Effects.tick Tick
+             )
+       UpdateVariable name mval ->
+         let
+           updatedVars = List.map (List.map
+                                   (updateVar (name, mval))
+                                  ) state.values
+         in
+           ( { state | values = updatedVars, animationState = Nothing }, Effects.tick Tick)
 
 -- View
 
-numberToBar : Time -> Term -> Color -> NumberLineInfo
-numberToBar t term c =
-  case term of
-    Constant {value} ->
+numberToBar : Time -> ColoredTerm -> NumberLineInfo
+numberToBar t cterm =
+  case cterm.term of
+    Constant _ ->
       { start = 0
-      , size = toFloat value
-      , color = c
+      , size = toFloat (getValue cterm)
+      , color = cterm.color
       }
-    Variable {name, value, prevValue} ->
+    Variable _ ->
       { start = 0
-      , size = animate t (moveBar (toFloat (withDefault 0 prevValue)) (toFloat (withDefault 0 value)))
-      , color = c
+      , size = animate t (moveBar (toFloat (getPrevValue cterm)) (toFloat (getValue cterm)))
+      , color = cterm.color
       }
 
 addBars : NumberLineInfo -> NumberLineInfo -> NumberLineInfo
@@ -157,40 +272,32 @@ makeFullBar scale dims ypos bars =
               >> moveY ((toFloat ((ypos - 1)*dims.height*(-1))) + (toFloat dims.height) / 2)
              ) positionBars
 
-barCollage : Dimensions -> List (List (Term, Color)) -> AnimationState -> Element
-barCollage dims setsOfVals anistate =
+barCollage : NLState -> Element
+barCollage {values, collageSize, animationState} =
   let
-    timePassed = case anistate of
+    timePassed = case animationState of
                    Nothing -> 0
                    Just x -> x.elapsedTime
-    numRows = List.length setsOfVals
+    numRows = List.length values
     xMax =
-      setsOfVals
-        |> List.map (List.map (termToInt << fst))
+      values
+        |> List.map (List.map getValue)
         |> List.map (List.sum >> abs)
         |> List.maximum
         |> Maybe.withDefault 0
         |> \x -> x + 5
-    scale = (toFloat dims.width) / ((toFloat xMax) * 2)
-    setsOfBars = List.map (List.map (uncurry (numberToBar timePassed))) setsOfVals
+    scale = (toFloat collageSize.width) / ((toFloat xMax) * 2)
+    setsOfBars = List.map (List.map (numberToBar timePassed)) values
   in
-    collage dims.width (numRows*dims.height*2)
+    collage collageSize.width (numRows*collageSize.height*2)
               (List.concat
-               (List.indexedMap (makeFullBar scale dims) setsOfBars))
-
-termToInt : Term -> Int
-termToInt term =
-  case term of
-    Constant c -> c.value
-    Variable v -> withDefault 0 v.value
+               (List.indexedMap (makeFullBar scale collageSize) setsOfBars))
 
 view : Signal.Address NLAction -> NLState -> Html
 view address state =
  Html.div
         [ Html.Attributes.class "bars" ]
-        [ (barCollage state.collageSize
-                      state.values
-                      state.animationState)
+        [ (barCollage state)
 --                      (List.map (List.map (\ (t, c) -> (termToInt t, c))) state.values))
           |> Html.fromElement
         ]
