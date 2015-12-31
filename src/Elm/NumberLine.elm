@@ -32,7 +32,7 @@ type alias Dimensions =
 type alias AnimationState = Maybe {prevTime : Time, elapsedTime: Time}
 
 type alias ColoredTerm =
-                       { term : Term
+                       { term : Term 
                        , color : Color
                        , negated : Bool
                        }
@@ -86,13 +86,6 @@ setValue cterm newVal =
     Constant _ -> cterm
     Variable v -> {cterm | term = Variable { v | value = newVal, prevValue = v.value}}
 
-
--- init : Dimensions -> List (List (Term, Color)) -> NLState
--- init dims nums =
---   { values = nums
---   , collageSize = dims
---   , animationState = Nothing
---   }
 
 lookupColor : Term -> ColorRecord -> (Maybe Color, ColorRecord)
 lookupColor term colorRec =
@@ -168,7 +161,7 @@ colorSystem sys colors =
 init : List Color -> System -> NLState
 init colors sys =
   let
-    vals = colorSystem sys colors
+    vals = colorSystem sys (colors ++ defaultColors)
   in
     { values = vals
     , collageSize = defaultDims

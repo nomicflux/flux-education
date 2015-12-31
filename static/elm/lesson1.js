@@ -10041,6 +10041,123 @@ Elm.Json.Decode.make = function (_elm) {
                                     ,value: value
                                     ,customDecoder: customDecoder};
 };
+Elm.Set = Elm.Set || {};
+Elm.Set.make = function (_elm) {
+   "use strict";
+   _elm.Set = _elm.Set || {};
+   if (_elm.Set.values) return _elm.Set.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Dict = Elm.Dict.make(_elm),
+   $List = Elm.List.make(_elm);
+   var _op = {};
+   var foldr = F3(function (f,b,_p0) {
+      var _p1 = _p0;
+      return A3($Dict.foldr,
+      F3(function (k,_p2,b) {    return A2(f,k,b);}),
+      b,
+      _p1._0);
+   });
+   var foldl = F3(function (f,b,_p3) {
+      var _p4 = _p3;
+      return A3($Dict.foldl,
+      F3(function (k,_p5,b) {    return A2(f,k,b);}),
+      b,
+      _p4._0);
+   });
+   var toList = function (_p6) {
+      var _p7 = _p6;
+      return $Dict.keys(_p7._0);
+   };
+   var size = function (_p8) {
+      var _p9 = _p8;
+      return $Dict.size(_p9._0);
+   };
+   var member = F2(function (k,_p10) {
+      var _p11 = _p10;
+      return A2($Dict.member,k,_p11._0);
+   });
+   var isEmpty = function (_p12) {
+      var _p13 = _p12;
+      return $Dict.isEmpty(_p13._0);
+   };
+   var Set_elm_builtin = function (a) {
+      return {ctor: "Set_elm_builtin",_0: a};
+   };
+   var empty = Set_elm_builtin($Dict.empty);
+   var singleton = function (k) {
+      return Set_elm_builtin(A2($Dict.singleton,
+      k,
+      {ctor: "_Tuple0"}));
+   };
+   var insert = F2(function (k,_p14) {
+      var _p15 = _p14;
+      return Set_elm_builtin(A3($Dict.insert,
+      k,
+      {ctor: "_Tuple0"},
+      _p15._0));
+   });
+   var fromList = function (xs) {
+      return A3($List.foldl,insert,empty,xs);
+   };
+   var map = F2(function (f,s) {
+      return fromList(A2($List.map,f,toList(s)));
+   });
+   var remove = F2(function (k,_p16) {
+      var _p17 = _p16;
+      return Set_elm_builtin(A2($Dict.remove,k,_p17._0));
+   });
+   var union = F2(function (_p19,_p18) {
+      var _p20 = _p19;
+      var _p21 = _p18;
+      return Set_elm_builtin(A2($Dict.union,_p20._0,_p21._0));
+   });
+   var intersect = F2(function (_p23,_p22) {
+      var _p24 = _p23;
+      var _p25 = _p22;
+      return Set_elm_builtin(A2($Dict.intersect,_p24._0,_p25._0));
+   });
+   var diff = F2(function (_p27,_p26) {
+      var _p28 = _p27;
+      var _p29 = _p26;
+      return Set_elm_builtin(A2($Dict.diff,_p28._0,_p29._0));
+   });
+   var filter = F2(function (p,_p30) {
+      var _p31 = _p30;
+      return Set_elm_builtin(A2($Dict.filter,
+      F2(function (k,_p32) {    return p(k);}),
+      _p31._0));
+   });
+   var partition = F2(function (p,_p33) {
+      var _p34 = _p33;
+      var _p35 = A2($Dict.partition,
+      F2(function (k,_p36) {    return p(k);}),
+      _p34._0);
+      var p1 = _p35._0;
+      var p2 = _p35._1;
+      return {ctor: "_Tuple2"
+             ,_0: Set_elm_builtin(p1)
+             ,_1: Set_elm_builtin(p2)};
+   });
+   return _elm.Set.values = {_op: _op
+                            ,empty: empty
+                            ,singleton: singleton
+                            ,insert: insert
+                            ,remove: remove
+                            ,isEmpty: isEmpty
+                            ,member: member
+                            ,size: size
+                            ,foldl: foldl
+                            ,foldr: foldr
+                            ,map: map
+                            ,filter: filter
+                            ,partition: partition
+                            ,union: union
+                            ,intersect: intersect
+                            ,diff: diff
+                            ,toList: toList
+                            ,fromList: fromList};
+};
 Elm.Native.Effects = {};
 Elm.Native.Effects.make = function(localRuntime) {
 
@@ -13008,6 +13125,7 @@ Elm.Terms.make = function (_elm) {
    $List = Elm.List.make(_elm),
    $Maybe = Elm.Maybe.make(_elm),
    $Result = Elm.Result.make(_elm),
+   $Set = Elm.Set.make(_elm),
    $Signal = Elm.Signal.make(_elm),
    $String = Elm.String.make(_elm);
    var _op = {};
@@ -13030,102 +13148,146 @@ Elm.Terms.make = function (_elm) {
             }
       }
    };
+   var formGetVars = function (form) {
+      var _p2 = form;
+      if (_p2.ctor === "SimpleT") {
+            if (_p2._0.ctor === "Constant") {
+                  return $Set.empty;
+               } else {
+                  return $Set.singleton(_p2._0._0.name);
+               }
+         } else {
+            return A2($Set.union,
+            formGetVars(_p2._0),
+            formGetVars(_p2._2));
+         }
+   };
+   var eqGetVars = function (eq) {
+      var _p3 = eq;
+      if (_p3.ctor === "Input") {
+            return $Set.empty;
+         } else {
+            var _p4 = _p3._0;
+            return A2($Set.union,formGetVars(_p4.lhs),formGetVars(_p4.rhs));
+         }
+   };
+   var eqContainsVar = F2(function (name,eq) {
+      return A2($Set.member,name,eqGetVars(eq));
+   });
    var evalTerm = F2(function (term,vals) {
-      var matchVar = F2(function (t,_p2) {
-         var _p3 = _p2;
-         var _p4 = t;
-         if (_p4.ctor === "Constant") {
-               return $Maybe.Just(_p4._0.value);
+      var matchVar = F2(function (t,_p5) {
+         var _p6 = _p5;
+         var _p7 = t;
+         if (_p7.ctor === "Constant") {
+               return $Maybe.Just(_p7._0.value);
             } else {
-               return _U.eq(_p3._0,_p4._0.name) ? _p3._1 : $Maybe.Nothing;
+               return _U.eq(_p6._0,_p7._0.name) ? _p6._1 : $Maybe.Nothing;
             }
       });
-      var _p5 = term;
-      if (_p5.ctor === "Constant") {
-            return $Maybe.Just(_p5._0.value);
+      var _p8 = term;
+      if (_p8.ctor === "Constant") {
+            return $Maybe.Just(_p8._0.value);
          } else {
             return $Maybe.oneOf(A2($List.map,matchVar(term),vals));
          }
    });
    var evalFormula = F2(function (vals,formula) {
       var thisEval = evalFormula(vals);
-      var _p6 = formula;
-      if (_p6.ctor === "SimpleT") {
-            return A2(evalTerm,_p6._0,vals);
+      var _p9 = formula;
+      if (_p9.ctor === "SimpleT") {
+            return A2(evalTerm,_p9._0,vals);
          } else {
-            var _p9 = _p6._2;
-            var _p8 = _p6._0;
-            var _p7 = _p6._1;
-            switch (_p7.ctor)
+            var _p12 = _p9._2;
+            var _p11 = _p9._0;
+            var _p10 = _p9._1;
+            switch (_p10.ctor)
             {case "Add": return A3($Maybe.map2,
                  F2(function (x,y) {    return x + y;}),
-                 thisEval(_p8),
-                 thisEval(_p9));
+                 thisEval(_p11),
+                 thisEval(_p12));
                case "Subtract": return A3($Maybe.map2,
                  F2(function (x,y) {    return x - y;}),
-                 thisEval(_p8),
-                 thisEval(_p9));
+                 thisEval(_p11),
+                 thisEval(_p12));
                case "Multiply": return A3($Maybe.map2,
                  F2(function (x,y) {    return x * y;}),
-                 thisEval(_p8),
-                 thisEval(_p9));
+                 thisEval(_p11),
+                 thisEval(_p12));
                case "Divide": return A3($Maybe.map2,
                  F2(function (x,y) {    return x / y | 0;}),
-                 thisEval(_p8),
-                 thisEval(_p9));
+                 thisEval(_p11),
+                 thisEval(_p12));
                default: return $Maybe.Nothing;}
          }
    });
    var checkEquation = F2(function (vals,eq) {
-      var _p10 = function () {
-         var _p11 = eq;
-         if (_p11.ctor === "Equation") {
-               var _p12 = _p11._0;
+      var _p13 = function () {
+         var _p14 = eq;
+         if (_p14.ctor === "Equation") {
+               var _p15 = _p14._0;
                return {ctor: "_Tuple2"
-                      ,_0: A2(evalFormula,vals,_p12.lhs)
-                      ,_1: A2(evalFormula,vals,_p12.rhs)};
+                      ,_0: A2(evalFormula,vals,_p15.lhs)
+                      ,_1: A2(evalFormula,vals,_p15.rhs)};
             } else {
-               var _p13 = _p11._0;
+               var _p16 = _p14._0;
                return {ctor: "_Tuple2"
-                      ,_0: A2(evalFormula,vals,_p13.lhs)
-                      ,_1: _p13.input.currentValue};
+                      ,_0: A2(evalFormula,vals,_p16.lhs)
+                      ,_1: _p16.input.currentValue};
             }
       }();
-      var lhs = _p10._0;
-      var rhs = _p10._1;
-      var _p14 = {ctor: "_Tuple2",_0: lhs,_1: rhs};
-      if (_p14.ctor === "_Tuple2" && _p14._0.ctor === "Just" && _p14._1.ctor === "Just")
+      var lhs = _p13._0;
+      var rhs = _p13._1;
+      var _p17 = {ctor: "_Tuple3",_0: lhs,_1: rhs,_2: vals};
+      var _p18 = {ctor: "_Tuple2",_0: lhs,_1: rhs};
+      if (_p18.ctor === "_Tuple2" && _p18._0.ctor === "Just" && _p18._1.ctor === "Just")
       {
-            return $Maybe.Just(_U.eq(_p14._0._0,_p14._1._0));
+            return $Maybe.Just(_U.eq(_p18._0._0,_p18._1._0));
          } else {
             return $Maybe.Nothing;
          }
    });
+   var checkVariable = F2(function (sys,name) {
+      var vals = getInputVals(sys);
+      var getVar = A2($List.filter,
+      function (_p19) {
+         var _p20 = _p19;
+         return _U.eq(_p20._0,name);
+      },
+      vals);
+      var checkedEqs = A2($List.map,
+      checkEquation(vals),
+      A2($List.filter,eqContainsVar(name),sys));
+      return !_U.eq($List.length(getVar),
+      1) ? $Maybe.Nothing : A3($List.foldl,
+      $Maybe.map2(F2(function (a,b) {    return a && b;})),
+      $Maybe.Just(true),
+      checkedEqs);
+   });
    var checkBoxes = F2(function (vals,sys) {
       checkBoxes: while (true) {
-         var _p15 = sys;
-         if (_p15.ctor === "[]") {
+         var _p21 = sys;
+         if (_p21.ctor === "[]") {
                return _U.list([]);
             } else {
-               if (_p15._0.ctor === "Equation") {
-                     var _v10 = vals,_v11 = _p15._1;
-                     vals = _v10;
-                     sys = _v11;
+               if (_p21._0.ctor === "Equation") {
+                     var _v13 = vals,_v14 = _p21._1;
+                     vals = _v13;
+                     sys = _v14;
                      continue checkBoxes;
                   } else {
-                     var _p18 = _p15._1;
-                     var _p17 = _p15._0;
-                     var _p16 = _p17;
-                     if (_p16.ctor === "Input") {
+                     var _p24 = _p21._1;
+                     var _p23 = _p21._0;
+                     var _p22 = _p23;
+                     if (_p22.ctor === "Input") {
                            return A2($List._op["::"],
                            {ctor: "_Tuple2"
-                           ,_0: A2(checkEquation,vals,_p17)
-                           ,_1: _p16._0.input},
-                           A2(checkBoxes,vals,_p18));
+                           ,_0: A2(checkEquation,vals,_p23)
+                           ,_1: _p22._0.input},
+                           A2(checkBoxes,vals,_p24));
                         } else {
-                           var _v13 = vals,_v14 = _p18;
-                           vals = _v13;
-                           sys = _v14;
+                           var _v16 = vals,_v17 = _p24;
+                           vals = _v16;
+                           sys = _v17;
                            continue checkBoxes;
                         }
                   }
@@ -13143,6 +13305,22 @@ Elm.Terms.make = function (_elm) {
       return anyBad ? $Maybe.Nothing : $Maybe.Just(A2(checkBoxes,
       vals,
       sys));
+   };
+   var cleanList = function (ml) {
+      cleanList: while (true) {
+         var _p25 = ml;
+         if (_p25.ctor === "[]") {
+               return _U.list([]);
+            } else {
+               if (_p25._0.ctor === "Nothing") {
+                     var _v19 = _p25._1;
+                     ml = _v19;
+                     continue cleanList;
+                  } else {
+                     return A2($List._op["::"],_p25._0._0,cleanList(_p25._1));
+                  }
+            }
+      }
    };
    var newBox = function (name) {
       return {name: name,currentValue: $Maybe.Nothing};
@@ -13167,8 +13345,8 @@ Elm.Terms.make = function (_elm) {
    var Add = {ctor: "Add"};
    var opParser = function () {
       var toOp = function (c) {
-         var _p19 = c;
-         switch (_p19)
+         var _p26 = c;
+         switch (_p26)
          {case "+": return Add;
             case "-": return Subtract;
             case "*": return Multiply;
@@ -13202,12 +13380,12 @@ Elm.Terms.make = function (_elm) {
       return {ctor: "Constant",_0: a};
    };
    var constantParser = A2($Combine$Infix._op["<$>"],
-   function (_p20) {
+   function (_p27) {
       return function (k) {
          return Constant({value: k});
       }(A2($Maybe.withDefault,
       0,
-      $Result.toMaybe($String.toInt(_p20))));
+      $Result.toMaybe($String.toInt(_p27))));
    },
    $Combine.regex("[0-9]+"));
    var termParser = A2($Combine$Infix._op["<|>"],
@@ -13218,8 +13396,8 @@ Elm.Terms.make = function (_elm) {
       var singleTerm = A2($Combine$Infix._op["<$>"],
       SimpleT,
       termParser);
-      var allTerms = $Combine.rec(function (_p21) {
-         var _p22 = _p21;
+      var allTerms = $Combine.rec(function (_p28) {
+         var _p29 = _p28;
          return A2($Combine$Infix._op["<*>"],
          A2($Combine$Infix._op["<*>"],
          A2($Combine$Infix._op["<$>"],TreeT,singleTerm),
@@ -13228,8 +13406,8 @@ Elm.Terms.make = function (_elm) {
          spaces)),
          singleTerm);
       });
-      return $Combine.rec(function (_p23) {
-         var _p24 = _p23;
+      return $Combine.rec(function (_p30) {
+         var _p31 = _p30;
          return A2($Combine$Infix._op["<|>"],allTerms,singleTerm);
       });
    }();
@@ -13247,17 +13425,34 @@ Elm.Terms.make = function (_elm) {
    var equationParser = A2($Combine$Infix._op["<|>"],
    plainEqParser,
    inputParser);
-   var stringToSystem = function (s) {
-      var _p25 = A2($Combine.parse,equationParser,s);
-      if (_p25._0.ctor === "Done") {
-            return $Maybe.Just(_p25._0._0);
+   var stringToEquation = function (s) {
+      var _p32 = A2($Combine.parse,equationParser,s);
+      if (_p32._0.ctor === "Done") {
+            return $Maybe.Just(_p32._0._0);
          } else {
             return A2($Basics.always,
             $Maybe.Nothing,
             A2($Debug.log,
             "Failure",
-            {ctor: "_Tuple2",_0: _p25._0._0,_1: _p25._1}));
+            {ctor: "_Tuple2",_0: _p32._0._0,_1: _p32._1}));
          }
+   };
+   var genSystem = function (strs) {
+      var mkInput = function (n) {
+         return stringToEquation(A2($Basics._op["++"],"?",n));
+      };
+      var eqs = $List.reverse(cleanList(A2($List.map,
+      stringToEquation,
+      strs)));
+      var vars = $Set.toList(A3($List.foldl,
+      F2(function (eq,acc) {
+         return A2($Set.union,acc,eqGetVars(eq));
+      }),
+      $Set.empty,
+      eqs));
+      return A2($Basics._op["++"],
+      eqs,
+      cleanList(A2($List.map,mkInput,vars)));
    };
    var nullEq = Equation({lhs: SimpleT(Constant({value: 0}))
                          ,rhs: SimpleT(Constant({value: 0}))});
@@ -13284,11 +13479,17 @@ Elm.Terms.make = function (_elm) {
                               ,inputParser: inputParser
                               ,plainEqParser: plainEqParser
                               ,equationParser: equationParser
-                              ,stringToSystem: stringToSystem
+                              ,stringToEquation: stringToEquation
+                              ,cleanList: cleanList
+                              ,genSystem: genSystem
                               ,nullEq: nullEq
                               ,evalTerm: evalTerm
                               ,evalFormula: evalFormula
                               ,checkEquation: checkEquation
+                              ,formGetVars: formGetVars
+                              ,eqGetVars: eqGetVars
+                              ,eqContainsVar: eqContainsVar
+                              ,checkVariable: checkVariable
                               ,getInputVals: getInputVals
                               ,checkBoxes: checkBoxes
                               ,checkSystem: checkSystem};
@@ -13610,7 +13811,9 @@ Elm.NumberLine.make = function (_elm) {
    });
    var defaultDims = {height: 10,width: 350};
    var init = F2(function (colors,sys) {
-      var vals = A2(colorSystem,sys,colors);
+      var vals = A2(colorSystem,
+      sys,
+      A2($Basics._op["++"],colors,defaultColors));
       return {values: vals
              ,collageSize: defaultDims
              ,animationState: $Maybe.Nothing};
@@ -13744,33 +13947,37 @@ Elm.Question.make = function (_elm) {
    var boxesComplete = function (state) {
       return A2($List.all,
       function (b) {
-         return b.completed;
+         return _U.eq(b.completed,$Maybe.Just(true));
       },
       state.boxes);
    };
    var faClass = function (box) {
-      return box.completed ? "fa fa-check-square-o" : box.attempted ? "fa fa-square-o" : "fa fa-square-o";
+      return _U.eq(box.completed,
+      $Maybe.Just(true)) ? "fa fa-check-square-o" : box.attempted && _U.eq(box.completed,
+      $Maybe.Just(false)) ? "fa fa-square-o" : "fa fa-square-o";
    };
    var completionClass = function (box) {
-      return box.completed ? "completed" : box.attempted ? "incorrect" : "new-question";
+      return _U.eq(box.completed,
+      $Maybe.Just(true)) ? "completed" : box.attempted && _U.eq(box.completed,
+      $Maybe.Just(false)) ? "incorrect" : "new-question";
    };
-   var validateBox = F3(function (state,box,val) {
-      return false;
+   var validateBox = F3(function (sys,box,val) {
+      return A2($Terms.checkVariable,sys,box.id);
    });
-   var updateBox = F4(function (state,wantedBid,mval,box) {
+   var updateBox = F4(function (sys,wantedBid,mval,box) {
       return _U.eq(box.id,wantedBid) ? _U.update(box,
       {attempted: true
-      ,completed: A3(validateBox,state,box,mval)
-      ,guess: mval}) : box;
+      ,completed: A3(validateBox,sys,box,mval)
+      ,guess: mval}) : _U.update(box,
+      {completed: A3(validateBox,sys,box,mval)});
    });
    var update = F2(function (action,state) {
-      var fullUpdateBox = updateBox(state);
       var _p3 = action;
       if (_p3.ctor === "UpdateBox") {
             var newBoxes = A2($List.map,
-            A2(fullUpdateBox,_p3._1,_p3._2),
+            A3(updateBox,_p3._0,_p3._1,_p3._2),
             state.boxes);
-            return _U.update(state,{equations: _p3._0,boxes: newBoxes});
+            return _U.update(state,{boxes: newBoxes});
          } else {
             return state;
          }
@@ -13781,33 +13988,41 @@ Elm.Question.make = function (_elm) {
    var UpdateBox = F3(function (a,b,c) {
       return {ctor: "UpdateBox",_0: a,_1: b,_2: c};
    });
-   var boxToHtml = F3(function (address,state,vbox) {
+   var swapUpdateSystem = F2(function (action,newSys) {
+      var _p4 = action;
+      if (_p4.ctor === "UpdateBox") {
+            return A3(UpdateBox,newSys,_p4._1,_p4._2);
+         } else {
+            return action;
+         }
+   });
+   var boxToHtml = F4(function (address,state,sys,vbox) {
       var mbox = A2(findBox,state,vbox);
       var boxHtml = function () {
-         var _p4 = mbox;
-         if (_p4.ctor === "Nothing") {
+         var _p5 = mbox;
+         if (_p5.ctor === "Nothing") {
                return _U.list([]);
             } else {
-               var _p5 = _p4._0;
+               var _p6 = _p5._0;
                return _U.list([A2($Html.input,
                               _U.list([$Html$Attributes.type$("text")
-                                      ,$Html$Attributes.$class(completionClass(_p5))
+                                      ,$Html$Attributes.$class(completionClass(_p6))
                                       ,A3($Html$Events.on,
                                       "change",
                                       $Html$Events.targetValue,
                                       A2(targetToSubmission,
                                       address,
                                       function (x) {
-                                         return A3(UpdateBox,state.equations,_p5.id,x);
+                                         return A3(UpdateBox,sys,_p6.id,x);
                                       }))]),
                               _U.list([]))
                               ,A2($Html.button,
                               _U.list([$Html$Attributes.$class(A2($Basics._op["++"],
                               "btn btn-side ",
-                              completionClass(_p5)))]),
+                              completionClass(_p6)))]),
                               _U.list([A3($Html.node,
                               "i",
-                              _U.list([$Html$Attributes.$class(faClass(_p5))]),
+                              _U.list([$Html$Attributes.$class(faClass(_p6))]),
                               _U.list([]))]))]);
             }
       }();
@@ -13815,32 +14030,32 @@ Elm.Question.make = function (_elm) {
       _U.list([$Html$Attributes.$class("formula formula-input")]),
       boxHtml);
    });
-   var eqToHtml = F3(function (address,state,eq) {
-      var _p6 = eq;
-      if (_p6.ctor === "Equation") {
-            var _p7 = _p6._0;
+   var eqToHtml = F4(function (address,state,sys,eq) {
+      var _p7 = eq;
+      if (_p7.ctor === "Equation") {
+            var _p8 = _p7._0;
             return A2($Html.div,
             _U.list([$Html$Attributes.$class("equation equation-plain")]),
-            _U.list([formulaToHtml(_p7.lhs)
-                    ,$Html.text(" = ")
-                    ,formulaToHtml(_p7.rhs)]));
-         } else {
-            var _p8 = _p6._0;
-            return A2($Html.div,
-            _U.list([$Html$Attributes.$class("equation equation-input")]),
             _U.list([formulaToHtml(_p8.lhs)
                     ,$Html.text(" = ")
-                    ,A3(boxToHtml,address,state,_p8.input)]));
+                    ,formulaToHtml(_p8.rhs)]));
+         } else {
+            var _p9 = _p7._0;
+            return A2($Html.div,
+            _U.list([$Html$Attributes.$class("equation equation-input")]),
+            _U.list([formulaToHtml(_p9.lhs)
+                    ,$Html.text(" = ")
+                    ,A4(boxToHtml,address,state,sys,_p9.input)]));
          }
    });
-   var view = F2(function (address,state) {
-      var fullEqToHtml = A2(eqToHtml,address,state);
+   var view = F3(function (address,state,sys) {
+      var fullEqToHtml = A3(eqToHtml,address,state,sys);
       return A2($Html.div,
       _U.list([$Html$Attributes.$class("blanks")]),
-      A2($List.map,fullEqToHtml,state.equations));
+      A2($List.map,fullEqToHtml,sys));
    });
    var mkBox = function (box) {
-      return {completed: false
+      return {completed: $Maybe.Nothing
              ,attempted: false
              ,guess: $Maybe.Nothing
              ,id: box.name};
@@ -13849,11 +14064,9 @@ Elm.Question.make = function (_elm) {
       var boxes = A2($List.map,
       $Basics.snd,
       A2($Maybe.withDefault,_U.list([]),$Terms.checkSystem(sys)));
-      return {boxes: A2($List.map,mkBox,boxes),equations: sys};
+      return {boxes: A2($List.map,mkBox,boxes)};
    };
-   var QState = F2(function (a,b) {
-      return {boxes: a,equations: b};
-   });
+   var QState = function (a) {    return {boxes: a};};
    var InputBox = F4(function (a,b,c,d) {
       return {completed: a,attempted: b,guess: c,id: d};
    });
@@ -13864,6 +14077,7 @@ Elm.Question.make = function (_elm) {
                                  ,mkQuestion: mkQuestion
                                  ,UpdateBox: UpdateBox
                                  ,Submission: Submission
+                                 ,swapUpdateSystem: swapUpdateSystem
                                  ,update: update
                                  ,validateBox: validateBox
                                  ,updateBox: updateBox
@@ -13919,33 +14133,27 @@ Elm.Equation.make = function (_elm) {
       nl,
       A2($NumberLine.UpdateVariable,_p9._0,_p9._1));
    });
-   var sendQuestionUpdate = F2(function (q,_p10) {
+   var updateBox = F2(function (box,_p10) {
       var _p11 = _p10;
-      return A2($Question.update,
-      A3($Question.UpdateBox,q.equations,_p11._0,_p11._1),
-      q);
-   });
-   var updateBox = F2(function (box,_p12) {
-      var _p13 = _p12;
-      return _U.eq(_p13._0,box.name) ? _U.update(box,
-      {currentValue: _p13._1}) : box;
+      return _U.eq(_p11._0,box.name) ? _U.update(box,
+      {currentValue: _p11._1}) : box;
    });
    var updateBoxes = F2(function (sys,val) {
-      var _p14 = sys;
-      if (_p14.ctor === "[]") {
+      var _p12 = sys;
+      if (_p12.ctor === "[]") {
             return sys;
          } else {
-            var _p18 = _p14._1;
-            var _p17 = _p14._0;
-            var _p15 = _p17;
-            if (_p15.ctor === "Equation") {
-                  return A2($List._op["::"],_p17,A2(updateBoxes,_p18,val));
+            var _p16 = _p12._1;
+            var _p15 = _p12._0;
+            var _p13 = _p15;
+            if (_p13.ctor === "Equation") {
+                  return A2($List._op["::"],_p15,A2(updateBoxes,_p16,val));
                } else {
-                  var _p16 = _p15._0;
+                  var _p14 = _p13._0;
                   return A2($List._op["::"],
-                  $Terms.Input(_U.update(_p16,
-                  {input: A2(updateBox,_p16.input,val)})),
-                  A2(updateBoxes,_p18,val));
+                  $Terms.Input(_U.update(_p14,
+                  {input: A2(updateBox,_p14.input,val)})),
+                  A2(updateBoxes,_p16,val));
                }
          }
    });
@@ -13957,41 +14165,23 @@ Elm.Equation.make = function (_elm) {
    };
    var view = F2(function (address,state) {
       var visual = function () {
-         var _p19 = state.visual;
-         if (_p19.ctor === "Nothing") {
+         var _p17 = state.visual;
+         if (_p17.ctor === "Nothing") {
                return A2($Html.div,_U.list([]),_U.list([]));
             } else {
                return A2($NumberLine.view,
                A2($Signal.forwardTo,address,RelayVisual),
-               _p19._0._0);
+               _p17._0._0);
             }
       }();
       return A2($Html.div,
       _U.list([$Html$Attributes.$class("question")]),
-      _U.list([A2($Question.view,
+      _U.list([A3($Question.view,
               A2($Signal.forwardTo,address,RelayQuestion),
-              state.question)
+              state.question,
+              state.system)
               ,visual]));
    });
-   var UpdateValue = F2(function (a,b) {
-      return {ctor: "UpdateValue",_0: a,_1: b};
-   });
-   var cleanList = function (ml) {
-      cleanList: while (true) {
-         var _p20 = ml;
-         if (_p20.ctor === "[]") {
-               return _U.list([]);
-            } else {
-               if (_p20._0.ctor === "Nothing") {
-                     var _v11 = _p20._1;
-                     ml = _v11;
-                     continue cleanList;
-                  } else {
-                     return A2($List._op["::"],_p20._0._0,cleanList(_p20._1));
-                  }
-            }
-      }
-   };
    var EQState = F3(function (a,b,c) {
       return {system: a,question: b,visual: c};
    });
@@ -14000,12 +14190,12 @@ Elm.Equation.make = function (_elm) {
    };
    var loadVisual = F3(function (vis,sys,colors) {
       var loadFunc = function () {
-         var _p21 = vis;
-         if (_p21.ctor === "NumberLine") {
-               return function (_p22) {
+         var _p18 = vis;
+         if (_p18.ctor === "NumberLine") {
+               return function (_p19) {
                   return $Maybe.Just(NLVisual(A2($NumberLine.init,
                   colors,
-                  _p22)));
+                  _p19)));
                };
             } else {
                return $Basics.always($Maybe.Nothing);
@@ -14014,96 +14204,70 @@ Elm.Equation.make = function (_elm) {
       return loadFunc(sys);
    });
    var init = F3(function (colors,vis,sysStr) {
-      var sys = cleanList(A2($List.map,
-      $Terms.stringToSystem,
-      sysStr));
+      var sys = $Terms.genSystem(sysStr);
       return {system: sys
              ,question: $Question.mkQuestion(sys)
              ,visual: A3(loadVisual,vis,sys,colors)};
    });
    var update = F2(function (state,action) {
-      var _p23 = action;
-      switch (_p23.ctor)
-      {case "UpdateValue": var _p28 = _p23._0;
-           var _p27 = _p23._1;
-           var _p24 = function () {
-              var _p25 = state.visual;
-              if (_p25.ctor === "Nothing") {
-                    return {ctor: "_Tuple2",_0: state.visual,_1: $Effects.none};
-                 } else {
-                    return A2(applyToFirst,
-                    function (_p26) {
-                       return $Maybe.Just(NLVisual(_p26));
-                    },
-                    A2($NumberLine.update,
-                    _p25._0._0,
-                    A2($NumberLine.UpdateVariable,_p28,_p27)));
-                 }
-           }();
-           var newVis = _p24._0;
-           var nlEff = _p24._1;
-           var newQ = A2(sendQuestionUpdate,
-           state.question,
-           {ctor: "_Tuple2",_0: _p28,_1: _p27});
-           var newSys = A2(updateBoxes,
-           state.system,
-           {ctor: "_Tuple2",_0: _p28,_1: _p27});
-           return {ctor: "_Tuple2"
-                  ,_0: _U.update(state,
-                  {system: newSys,question: newQ,visual: newVis})
-                  ,_1: A2($Effects.map,RelayVisual,nlEff)};
-         case "RelayVisual": var _p29 = state.visual;
-           if (_p29.ctor === "Nothing") {
-                 return {ctor: "_Tuple2",_0: state,_1: $Effects.none};
-              } else {
-                 var _p30 = A2(applyToBoth,
-                 {ctor: "_Tuple2"
-                 ,_0: function (_p31) {
-                    return $Maybe.Just(NLVisual(_p31));
-                 }
-                 ,_1: $Effects.map(RelayVisual)},
-                 A2($NumberLine.update,_p29._0._0,_p23._0));
-                 var newVis = _p30._0;
-                 var eff = _p30._1;
-                 return {ctor: "_Tuple2"
-                        ,_0: _U.update(state,{visual: newVis})
-                        ,_1: eff};
-              }
-         default: var _p38 = _p23._0;
-           var _p32 = _p38;
-           if (_p32.ctor === "UpdateBox") {
-                 var _p37 = _p32._1;
-                 var _p36 = _p32._2;
-                 var _p33 = function () {
-                    var _p34 = state.visual;
-                    if (_p34.ctor === "Nothing") {
-                          return {ctor: "_Tuple2",_0: state.visual,_1: $Effects.none};
-                       } else {
-                          return A2(applyToFirst,
-                          function (_p35) {
-                             return $Maybe.Just(NLVisual(_p35));
-                          },
-                          A2($NumberLine.update,
-                          _p34._0._0,
-                          A2($NumberLine.UpdateVariable,_p37,_p36)));
-                       }
-                 }();
-                 var newVis = _p33._0;
-                 var nlEff = _p33._1;
-                 var newQ = A2($Question.update,_p38,state.question);
-                 var newSys = A2(updateBoxes,
-                 state.system,
-                 {ctor: "_Tuple2",_0: _p37,_1: _p36});
-                 return {ctor: "_Tuple2"
-                        ,_0: _U.update(state,
-                        {system: newSys,question: newQ,visual: newVis})
-                        ,_1: A2($Effects.map,RelayVisual,nlEff)};
-              } else {
-                 var newQ = A2($Question.update,_p38,state.question);
-                 return {ctor: "_Tuple2"
-                        ,_0: _U.update(state,{question: newQ})
-                        ,_1: $Effects.none};
-              }}
+      var _p20 = action;
+      if (_p20.ctor === "RelayVisual") {
+            var _p21 = state.visual;
+            if (_p21.ctor === "Nothing") {
+                  return {ctor: "_Tuple2",_0: state,_1: $Effects.none};
+               } else {
+                  var _p22 = A2(applyToBoth,
+                  {ctor: "_Tuple2"
+                  ,_0: function (_p23) {
+                     return $Maybe.Just(NLVisual(_p23));
+                  }
+                  ,_1: $Effects.map(RelayVisual)},
+                  A2($NumberLine.update,_p21._0._0,_p20._0));
+                  var newVis = _p22._0;
+                  var eff = _p22._1;
+                  return {ctor: "_Tuple2"
+                         ,_0: _U.update(state,{visual: newVis})
+                         ,_1: eff};
+               }
+         } else {
+            var _p30 = _p20._0;
+            var _p24 = _p30;
+            if (_p24.ctor === "UpdateBox") {
+                  var _p29 = _p24._1;
+                  var _p28 = _p24._2;
+                  var _p25 = function () {
+                     var _p26 = state.visual;
+                     if (_p26.ctor === "Nothing") {
+                           return {ctor: "_Tuple2",_0: state.visual,_1: $Effects.none};
+                        } else {
+                           return A2(applyToFirst,
+                           function (_p27) {
+                              return $Maybe.Just(NLVisual(_p27));
+                           },
+                           A2($NumberLine.update,
+                           _p26._0._0,
+                           A2($NumberLine.UpdateVariable,_p29,_p28)));
+                        }
+                  }();
+                  var newVis = _p25._0;
+                  var nlEff = _p25._1;
+                  var newSys = A2(updateBoxes,
+                  state.system,
+                  {ctor: "_Tuple2",_0: _p29,_1: _p28});
+                  var newQ = A2($Question.update,
+                  A2($Question.swapUpdateSystem,_p30,newSys),
+                  state.question);
+                  return {ctor: "_Tuple2"
+                         ,_0: _U.update(state,
+                         {system: newSys,question: newQ,visual: newVis})
+                         ,_1: A2($Effects.map,RelayVisual,nlEff)};
+               } else {
+                  var newQ = A2($Question.update,_p30,state.question);
+                  return {ctor: "_Tuple2"
+                         ,_0: _U.update(state,{question: newQ})
+                         ,_1: $Effects.none};
+               }
+         }
    });
    var NoVisual = {ctor: "NoVisual"};
    var NumberLine = {ctor: "NumberLine"};
@@ -14113,14 +14277,11 @@ Elm.Equation.make = function (_elm) {
                                  ,NLVisual: NLVisual
                                  ,EQState: EQState
                                  ,loadVisual: loadVisual
-                                 ,cleanList: cleanList
                                  ,init: init
-                                 ,UpdateValue: UpdateValue
                                  ,RelayQuestion: RelayQuestion
                                  ,RelayVisual: RelayVisual
                                  ,updateBox: updateBox
                                  ,updateBoxes: updateBoxes
-                                 ,sendQuestionUpdate: sendQuestionUpdate
                                  ,sendNumberLineUpdate: sendNumberLineUpdate
                                  ,applyToFirst: applyToFirst
                                  ,applyToSecond: applyToSecond
@@ -14195,18 +14356,46 @@ Elm.Lesson1.make = function (_elm) {
       },
       model.equations));
    });
-   var colors = _U.list([$Color.red,$Color.green,$Color.blue]);
-   var mkSystem1 = F2(function (x,y) {
+   var colors = _U.list([$Color.red
+                        ,$Color.green
+                        ,$Color.blue
+                        ,$Color.yellow
+                        ,$Color.brown
+                        ,$Color.black
+                        ,$Color.orange]);
+   var mkSystem3 = F4(function (x,y,z,w) {
       return _U.list([A2($Basics._op["++"],
                      $Basics.toString(x),
                      A2($Basics._op["++"],
-                     " + ",
-                     A2($Basics._op["++"],$Basics.toString(y)," = x")))
-                     ,"?x"]);
+                     " - ",
+                     A2($Basics._op["++"],$Basics.toString(y)," = q")))
+                     ,A2($Basics._op["++"],
+                     "q + ",
+                     A2($Basics._op["++"],
+                     $Basics.toString(z),
+                     A2($Basics._op["++"]," = ",$Basics.toString(x - y + z))))
+                     ,A2($Basics._op["++"],
+                     "q + r = ",
+                     $Basics.toString(y - x + z + w))]);
+   });
+   var mkSystem2 = F2(function (x,y) {
+      return _U.list([A2($Basics._op["++"],
+      $Basics.toString(x),
+      A2($Basics._op["++"],
+      " - ",
+      A2($Basics._op["++"],$Basics.toString(y)," = y")))]);
+   });
+   var mkSystem1 = F2(function (x,y) {
+      return _U.list([A2($Basics._op["++"],
+      $Basics.toString(x),
+      A2($Basics._op["++"],
+      " + ",
+      A2($Basics._op["++"],$Basics.toString(y)," = bob")))]);
    });
    var equations = _U.list([A2(mkSystem1,2,3)
-                           ,A2(mkSystem1,5,7)
-                           ,A2(mkSystem1,2,40)]);
+                           ,A2(mkSystem1,2,40)
+                           ,A2(mkSystem2,5,3)
+                           ,A4(mkSystem3,1,2,3,4)]);
    var init = {equations: A2($List.indexedMap,
    F2(function (i,eq) {
       return {ctor: "_Tuple2"
@@ -14227,6 +14416,8 @@ Elm.Lesson1.make = function (_elm) {
    return _elm.Lesson1.values = {_op: _op
                                 ,Model: Model
                                 ,mkSystem1: mkSystem1
+                                ,mkSystem2: mkSystem2
+                                ,mkSystem3: mkSystem3
                                 ,equations: equations
                                 ,colors: colors
                                 ,init: init

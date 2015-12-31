@@ -33,17 +33,10 @@ loadVisual vis sys colors =
   in
     loadFunc sys
 
-cleanList : List (Maybe a) -> List a
-cleanList ml =
-  case ml of
-    [] -> []
-    (Nothing :: xs) -> cleanList xs
-    (Just x :: xs) -> x :: cleanList xs
-
 init : List Color -> VisualType -> List String -> EQState
 init colors vis sysStr =
   let
-    sys = cleanList (List.map Terms.stringToSystem sysStr)
+    sys = genSystem sysStr -- (List.map Terms.stringToSystem sysStr)
   in
     { system = sys
     , question = Question.mkQuestion sys
@@ -52,9 +45,9 @@ init colors vis sysStr =
 
 -- Update
 
-type EQAction = UpdateValue VarName (Maybe Int)
-              | RelayQuestion QAction
+type EQAction = RelayQuestion QAction
               | RelayVisual NLAction
+              --| UpdateValue VarName (Maybe Int)
 
 updateBox : VarBox -> (VarName, Maybe Int) -> VarBox
 updateBox box (name, mval) =
@@ -74,8 +67,8 @@ updateBoxes sys val =
         Input i ->
           Input { i | input = updateBox i.input val } :: updateBoxes xs val
 
-sendQuestionUpdate : QState -> (VarName, Maybe Int) -> QState
-sendQuestionUpdate q (name, value) = Question.update (Question.UpdateBox q.equations name value) q
+-- sendQuestionUpdate : QState -> (VarName, Maybe Int) -> QState
+-- sendQuestionUpdate q (name, value) = Question.update (Question.UpdateBox q.equations name value) q
 
 sendNumberLineUpdate : NLState -> (VarName, Maybe Int) -> (NLState, Effects NLAction)
 sendNumberLineUpdate nl (name, value) = NumberLine.update nl (NumberLine.UpdateVariable name value)
@@ -95,20 +88,20 @@ update state action =
     --_ = (state, action) |> Debug.log "Updating Equations Redux"
   -- in
     case action of
-      UpdateValue name mval ->
-        let
-          newSys = updateBoxes state.system (name, mval)
-          newQ   = sendQuestionUpdate state.question (name, mval)
-          (newVis, nlEff) = case state.visual of
-                              Nothing        -> (state.visual, Effects.none)
-                              Just (NLVisual nlState) -> applyToFirst
-                                                         (Just << NLVisual)
-                                                         (NumberLine.update nlState
-                                                          (NumberLine.UpdateVariable name mval))
-        in
-          ( { state | system = newSys, question = newQ, visual = newVis }
-          , Effects.map RelayVisual nlEff
-          )
+      -- UpdateValue name mval ->
+      --   let
+      --     newSys = updateBoxes state.system (name, mval)
+      --     newQ   = --sendQuestionUpdate state.question (name, mval)
+      --     (newVis, nlEff) = case state.visual of
+      --                         Nothing        -> (state.visual, Effects.none)
+      --                         Just (NLVisual nlState) -> applyToFirst
+      --                                                    (Just << NLVisual)
+      --                                                    (NumberLine.update nlState
+      --                                                     (NumberLine.UpdateVariable name mval))
+      --   in
+      --     ( { state | system = newSys, question = newQ, visual = newVis }
+      --     , Effects.map RelayVisual nlEff
+      --     )
       RelayVisual visAction ->
           case state.visual of
             Nothing -> (state, Effects.none)
@@ -123,7 +116,7 @@ update state action =
           Question.UpdateBox sys name mval ->
             let
               newSys = updateBoxes state.system (name, mval)
-              newQ = Question.update qAction state.question
+              newQ = Question.update (Question.swapUpdateSystem qAction newSys) state.question
               (newVis, nlEff) = case state.visual of
                                   Nothing        -> (state.visual, Effects.none)
                                   Just (NLVisual nlState) -> applyToFirst
@@ -153,5 +146,5 @@ view address state =
   in
     Html.div
           [ Html.Attributes.class "question" ]
-          [ (Question.view (Signal.forwardTo address RelayQuestion) state.question)
+          [ (Question.view (Signal.forwardTo address RelayQuestion) state.question state.system)
           ,  visual ]

@@ -16,7 +16,7 @@ type alias QuestionID = Int
 type alias BoxID = VarName
 
 type alias InputBox =
-  { completed : Bool
+  { completed : Maybe Bool
   , attempted : Bool
   , guess : Maybe Int
   , id : BoxID
@@ -24,12 +24,12 @@ type alias InputBox =
 
 type alias QState =
   { boxes : List InputBox
-  , equations : System
+  --, equations : System
   --, id : QuestionID
   }
 
 mkBox : VarBox -> InputBox
-mkBox box = { completed = False
+mkBox box = { completed = Nothing
             , attempted = False
             , guess = Nothing
             , id = box.name
@@ -41,7 +41,7 @@ mkQuestion sys =
     boxes = List.map snd (withDefault [] (checkSystem sys))
   in
     { boxes = List.map mkBox boxes
-    , equations = sys
+    --, equations = sys
     --, id = qid + 1
     }
 
@@ -50,53 +50,42 @@ mkQuestion sys =
 type QAction = UpdateBox System BoxID (Maybe Int)
              | Submission VarName (Maybe Int)
 
+swapUpdateSystem : QAction -> System -> QAction
+swapUpdateSystem action newSys =
+  case action of
+    UpdateBox oldSys box mval -> UpdateBox newSys box mval
+    _ -> action
+
 update : QAction -> QState -> QState
 update action state =
-  let
-    fullUpdateBox = updateBox state
-    -- _ = (state, action) |> Debug.log "Updating Questions"
-  in
   case action of
     UpdateBox sys bid val ->
       let
-        newBoxes = List.map (fullUpdateBox bid val) state.boxes
+        newBoxes = List.map (updateBox sys bid val) state.boxes
       in
-        { state | equations = sys, boxes = newBoxes }
+        { state | boxes = newBoxes }
     Submission name mval -> state
 
-validateBox : QState -> InputBox -> Maybe Int -> Bool
-validateBox state box val = False-- checkSystem state.equations
-                            -- Implement!
+validateBox : System -> InputBox -> Maybe Int -> Maybe Bool
+validateBox sys box val = Terms.checkVariable sys box.id
 
-updateBox : QState -> BoxID -> Maybe Int -> InputBox -> InputBox
-updateBox state wantedBid mval box =
+updateBox : System -> BoxID -> Maybe Int -> InputBox -> InputBox
+updateBox sys wantedBid mval box =
   if box.id == wantedBid
   then
-    { box | attempted = True, completed = validateBox state box mval, guess = mval }
+    { box | attempted = True, completed = validateBox sys box mval, guess = mval }
   else
-    box
-
--- updateQuestion : ( QuestionID, BoxID ) -> Int -> QState -> QState
--- updateQuestion (qid, bid) val question =
---   if question.id == qid
---   then
---     let
---       eqs = Terms.updateBoxes (bid, val)
---       boxes = List.map (updateBox bid val) question.boxes
---     in
---       { question | equations = eqs, boxes = boxes }
---   else
---     question
+    { box | completed = validateBox sys box mval }
 
 -- View
 
 completionClass : InputBox -> String
 completionClass box =
-  if box.completed
+  if box.completed == Just True
   then
     "completed"
   else
-    if box.attempted
+    if box.attempted && box.completed == Just False
     then
       "incorrect"
     else
@@ -104,18 +93,18 @@ completionClass box =
 
 faClass : InputBox -> String
 faClass box =
-  if box.completed
+  if box.completed == Just True
   then
     "fa fa-check-square-o"
   else
-    if box.attempted
+    if box.attempted && box.completed == Just False
     then
       "fa fa-square-o"
     else
       "fa fa-square-o"
 
 boxesComplete : QState -> Bool
-boxesComplete state = List.all (\ b -> b.completed ) state.boxes
+boxesComplete state = List.all (\ b -> b.completed == Just True ) state.boxes
 
 -- findLatestAnswered : List QState -> QuestionID
 -- findLatestAnswered qs = qs
@@ -179,8 +168,8 @@ findBox : QState -> VarBox -> Maybe InputBox
 findBox state vbox =
   List.head (List.filter (\b -> b.id == vbox.name) state.boxes)
 
-boxToHtml : Signal.Address QAction -> QState -> VarBox -> Html
-boxToHtml address state vbox =
+boxToHtml : Signal.Address QAction -> QState -> System -> VarBox -> Html
+boxToHtml address state sys vbox =
   let
     mbox = findBox state vbox
     boxHtml = case mbox of
@@ -191,7 +180,7 @@ boxToHtml address state vbox =
                     , completionClass box |> Html.Attributes.class
                     , Html.Events.on "change"
                           Html.Events.targetValue
-                          (targetToSubmission address (\x -> UpdateBox state.equations box.id x))
+                          (targetToSubmission address (\x -> UpdateBox sys box.id x))
                     ]
                     [ ]
                   , Html.button
@@ -206,8 +195,8 @@ boxToHtml address state vbox =
           [ Html.Attributes.class "formula formula-input" ]
           boxHtml
 
-eqToHtml : Signal.Address QAction -> QState -> Equation -> Html
-eqToHtml address state eq =
+eqToHtml : Signal.Address QAction -> QState -> System -> Equation -> Html
+eqToHtml address state sys eq =
   case eq of
     Equation e ->
       Html.div
@@ -221,44 +210,14 @@ eqToHtml address state eq =
           [ Html.Attributes.class "equation equation-input" ]
           [ formulaToHtml i.lhs
           , Html.text " = "
-          , boxToHtml address state i.input
+          , boxToHtml address state sys i.input
           ]
 
-view : Signal.Address QAction -> QState -> Html
-view address state =
+view : Signal.Address QAction -> QState -> System -> Html
+view address state sys =
   let
-    fullEqToHtml = eqToHtml address state
+    fullEqToHtml = eqToHtml address state sys
   in
     Html.div
           [ Html.Attributes.class "blanks" ]
-          (List.map fullEqToHtml state.equations)
-
-
--- view : Signal.Address Action -> State -> Html
--- view address state =
---   let
---     eqs = List.map (view (Signal.forward address RelayQuestion)) state.system
---                 [ Html.div
---                         []
---                         [ makeMath (s1 ++ " + x = " ++ s2) ]
---                 , Html.div
---                         []
---                         [ makeMath ("     x = " ++ s2 ++ " - " ++ s1) ]
---                 , Html.div
---                         []
---                         [ Html.text "x  = "
---                         , Html.input
---                                 [ Html.Attributes.type' "text"
---                                 , completionClass question "x" |> Html.Attributes.class
---                                 , Html.Events.on "change"
---                                       Html.Events.targetValue
---                                             (targetToSubmission address question.id "x")
---                                 ]
---                                 [ ]
---                         , Html.button
---                                 [ "btn btn-side " ++ completionClass question "x" |> Html.Attributes.class ]
---                                 [ Html.node "i"
---                                         [ Html.Attributes.class (faClass question "x") ]
---                                         [ ]
---                                 ]
---                         ]
+          (List.map fullEqToHtml sys)

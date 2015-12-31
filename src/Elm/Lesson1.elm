@@ -19,18 +19,28 @@ type alias Model =
                  { equations : List (EQID, EQState) }
 
 mkSystem1 : Int -> Int -> List String
-mkSystem1 x y = [ toString x ++ " + "  ++ toString y ++ " = x"
-                , "?x"
+mkSystem1 x y = [ toString x ++ " + "  ++ toString y ++ " = bob"
                 ]
+
+mkSystem2 : Int -> Int -> List String
+mkSystem2 x y = [ toString x ++ " - "  ++ toString y ++ " = y"
+                ]
+
+mkSystem3 : Int -> Int -> Int -> Int -> List String
+mkSystem3 x y z w = [ toString x ++ " - "  ++ toString y ++ " = q"
+                    , "q + " ++ toString z ++ " = " ++ toString (x - y + z)
+                    , "q + r = " ++ toString (y - x + z + w)
+                    ]
 
 equations : List (List String)
 equations = [ mkSystem1 2 3
-            , mkSystem1 5 7
             , mkSystem1 2 40
+            , mkSystem2 5 3
+            , mkSystem3 1 2 3 4
             ]
 
 colors : List Color
-colors = [ Color.red, Color.green, Color.blue ]
+colors = [ Color.red, Color.green, Color.blue, Color.yellow, Color.brown, Color.black, Color.orange ]
 
 init : Model
 init = { equations = List.indexedMap (\ i eq -> (i,Equation.init colors NumberLine eq)) equations }
@@ -49,7 +59,6 @@ updateEquation wantedId action (currId, eqstate) =
       ((currId, newState), Effects.map (RelayEquation currId) eqeff)
   else
     ((currId, eqstate), Effects.none)
-
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
