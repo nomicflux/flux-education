@@ -43,6 +43,9 @@ init colors vis sysStr =
     , visual = loadVisual vis sys colors
     }
 
+equationCompleted : EQState -> Bool
+equationCompleted state = Question.questionCompleted state.question
+
 -- Update
 
 type EQAction = RelayQuestion QAction

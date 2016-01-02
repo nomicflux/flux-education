@@ -14054,6 +14054,13 @@ Elm.Question.make = function (_elm) {
       _U.list([$Html$Attributes.$class("blanks")]),
       A2($List.map,fullEqToHtml,sys));
    });
+   var questionCompleted = function (state) {
+      return A2($List.all,
+      function (b) {
+         return _U.eq(b.completed,$Maybe.Just(true));
+      },
+      state.boxes);
+   };
    var mkBox = function (box) {
       return {completed: $Maybe.Nothing
              ,attempted: false
@@ -14075,6 +14082,7 @@ Elm.Question.make = function (_elm) {
                                  ,QState: QState
                                  ,mkBox: mkBox
                                  ,mkQuestion: mkQuestion
+                                 ,questionCompleted: questionCompleted
                                  ,UpdateBox: UpdateBox
                                  ,Submission: Submission
                                  ,swapUpdateSystem: swapUpdateSystem
@@ -14182,6 +14190,9 @@ Elm.Equation.make = function (_elm) {
               state.system)
               ,visual]));
    });
+   var equationCompleted = function (state) {
+      return $Question.questionCompleted(state.question);
+   };
    var EQState = F3(function (a,b,c) {
       return {system: a,question: b,visual: c};
    });
@@ -14278,6 +14289,7 @@ Elm.Equation.make = function (_elm) {
                                  ,EQState: EQState
                                  ,loadVisual: loadVisual
                                  ,init: init
+                                 ,equationCompleted: equationCompleted
                                  ,RelayQuestion: RelayQuestion
                                  ,RelayVisual: RelayVisual
                                  ,updateBox: updateBox
@@ -14289,11 +14301,11 @@ Elm.Equation.make = function (_elm) {
                                  ,update: update
                                  ,view: view};
 };
-Elm.Lesson1 = Elm.Lesson1 || {};
-Elm.Lesson1.make = function (_elm) {
+Elm.Lesson = Elm.Lesson || {};
+Elm.Lesson.make = function (_elm) {
    "use strict";
-   _elm.Lesson1 = _elm.Lesson1 || {};
-   if (_elm.Lesson1.values) return _elm.Lesson1.values;
+   _elm.Lesson = _elm.Lesson || {};
+   if (_elm.Lesson.values) return _elm.Lesson.values;
    var _U = Elm.Native.Utils.make(_elm),
    $Basics = Elm.Basics.make(_elm),
    $Color = Elm.Color.make(_elm),
@@ -14315,6 +14327,13 @@ Elm.Lesson1.make = function (_elm) {
       _U.list([$Html$Attributes.$class("full-equation")]),
       _U.list([A2($Equation.view,address,eq)]));
    });
+   var completedMailbox = $Signal.mailbox(false);
+   var signalCompletion = Elm.Native.Port.make(_elm).outboundSignal("signalCompletion",
+   function (v) {
+      return v;
+   },
+   completedMailbox.signal);
+   var SendCompletion = {ctor: "SendCompletion"};
    var RelayEquation = F2(function (a,b) {
       return {ctor: "RelayEquation",_0: a,_1: b};
    });
@@ -14335,14 +14354,29 @@ Elm.Lesson1.make = function (_elm) {
    });
    var update = F2(function (action,model) {
       var _p5 = action;
-      var eqEffs = A2($List.map,
-      A2(updateEquation,_p5._0,_p5._1),
-      model.equations);
-      var newEqs = A2($List.map,$Basics.fst,eqEffs);
-      var effs = A2($List.map,$Basics.snd,eqEffs);
-      return {ctor: "_Tuple2"
-             ,_0: _U.update(model,{equations: newEqs})
-             ,_1: $Effects.batch(effs)};
+      if (_p5.ctor === "SendCompletion") {
+            return {ctor: "_Tuple2"
+                   ,_0: _U.update(model,{completed: true})
+                   ,_1: $Effects.none};
+         } else {
+            var completionAction = A2($List.all,
+            function (eq) {
+               return $Equation.equationCompleted($Basics.snd(eq));
+            },
+            model.equations) ? $Effects.task(A2($Task.map,
+            $Basics.always(SendCompletion),
+            A2($Signal.send,
+            completedMailbox.address,
+            true))) : $Effects.none;
+            var eqEffs = A2($List.map,
+            A2(updateEquation,_p5._0,_p5._1),
+            model.equations);
+            var newEqs = A2($List.map,$Basics.fst,eqEffs);
+            var effs = A2($List.map,$Basics.snd,eqEffs);
+            return {ctor: "_Tuple2"
+                   ,_0: _U.update(model,{equations: newEqs})
+                   ,_1: $Effects.batch(A2($List._op["::"],completionAction,effs))};
+         }
    });
    var view = F2(function (address,model) {
       return A2($Html.div,
@@ -14356,77 +14390,76 @@ Elm.Lesson1.make = function (_elm) {
       },
       model.equations));
    });
-   var colors = _U.list([$Color.red
-                        ,$Color.green
-                        ,$Color.blue
-                        ,$Color.yellow
-                        ,$Color.brown
-                        ,$Color.black
-                        ,$Color.orange]);
-   var mkSystem3 = F4(function (x,y,z,w) {
-      return _U.list([A2($Basics._op["++"],
-                     $Basics.toString(x),
-                     A2($Basics._op["++"],
-                     " - ",
-                     A2($Basics._op["++"],$Basics.toString(y)," = q")))
-                     ,A2($Basics._op["++"],
-                     "q + ",
-                     A2($Basics._op["++"],
-                     $Basics.toString(z),
-                     A2($Basics._op["++"]," = ",$Basics.toString(x - y + z))))
-                     ,A2($Basics._op["++"],
-                     "q + r = ",
-                     $Basics.toString(y - x + z + w))]);
+   var init = F3(function (eqStrs,colors,visType) {
+      return {equations: A2($List.indexedMap,
+             F2(function (i,eq) {
+                return {ctor: "_Tuple2"
+                       ,_0: i
+                       ,_1: A3($Equation.init,colors,visType,eq)};
+             }),
+             eqStrs)
+             ,completed: false};
    });
-   var mkSystem2 = F2(function (x,y) {
-      return _U.list([A2($Basics._op["++"],
-      $Basics.toString(x),
-      A2($Basics._op["++"],
-      " - ",
-      A2($Basics._op["++"],$Basics.toString(y)," = y")))]);
-   });
-   var mkSystem1 = F2(function (x,y) {
-      return _U.list([A2($Basics._op["++"],
-      $Basics.toString(x),
-      A2($Basics._op["++"],
-      " + ",
-      A2($Basics._op["++"],$Basics.toString(y)," = bob")))]);
-   });
-   var equations = _U.list([A2(mkSystem1,2,3)
-                           ,A2(mkSystem1,2,40)
-                           ,A2(mkSystem2,5,3)
-                           ,A4(mkSystem3,1,2,3,4)]);
-   var init = {equations: A2($List.indexedMap,
-   F2(function (i,eq) {
-      return {ctor: "_Tuple2"
-             ,_0: i
-             ,_1: A3($Equation.init,colors,$Equation.NumberLine,eq)};
-   }),
-   equations)};
-   var app = $StartApp.start({init: {ctor: "_Tuple2"
-                                    ,_0: init
+   var app = F3(function (eqStrs,colors,visType) {
+      return $StartApp.start({init: {ctor: "_Tuple2"
+                                    ,_0: A3(init,eqStrs,colors,visType)
                                     ,_1: noEffect}
                              ,update: update
                              ,view: view
                              ,inputs: _U.list([])});
+   });
+   var startLesson = app;
+   var Lesson = F2(function (a,b) {
+      return {equations: a,completed: b};
+   });
+   return _elm.Lesson.values = {_op: _op
+                               ,Lesson: Lesson
+                               ,init: init
+                               ,RelayEquation: RelayEquation
+                               ,SendCompletion: SendCompletion
+                               ,completedMailbox: completedMailbox
+                               ,updateEquation: updateEquation
+                               ,update: update
+                               ,viewEquation: viewEquation
+                               ,view: view
+                               ,noEffect: noEffect
+                               ,app: app
+                               ,startLesson: startLesson};
+};
+Elm.Lesson1 = Elm.Lesson1 || {};
+Elm.Lesson1.make = function (_elm) {
+   "use strict";
+   _elm.Lesson1 = _elm.Lesson1 || {};
+   if (_elm.Lesson1.values) return _elm.Lesson1.values;
+   var _U = Elm.Native.Utils.make(_elm),
+   $Basics = Elm.Basics.make(_elm),
+   $Color = Elm.Color.make(_elm),
+   $Debug = Elm.Debug.make(_elm),
+   $Effects = Elm.Effects.make(_elm),
+   $Equation = Elm.Equation.make(_elm),
+   $Html = Elm.Html.make(_elm),
+   $Lesson = Elm.Lesson.make(_elm),
+   $List = Elm.List.make(_elm),
+   $Maybe = Elm.Maybe.make(_elm),
+   $Result = Elm.Result.make(_elm),
+   $Signal = Elm.Signal.make(_elm),
+   $StartApp = Elm.StartApp.make(_elm),
+   $Task = Elm.Task.make(_elm);
+   var _op = {};
+   var colors = _U.list([$Color.red,$Color.green,$Color.blue]);
+   var equations = _U.list([_U.list(["2 + 3 = x"])
+                           ,_U.list(["5 + 7 = x"])
+                           ,_U.list(["2 + 40 = x"])]);
+   var app = A3($Lesson.startLesson,
+   equations,
+   colors,
+   $Equation.NumberLine);
    var tasks = Elm.Native.Task.make(_elm).performSignal("tasks",
    app.tasks);
    var main = app.html;
-   var Model = function (a) {    return {equations: a};};
    return _elm.Lesson1.values = {_op: _op
-                                ,Model: Model
-                                ,mkSystem1: mkSystem1
-                                ,mkSystem2: mkSystem2
-                                ,mkSystem3: mkSystem3
                                 ,equations: equations
                                 ,colors: colors
-                                ,init: init
-                                ,RelayEquation: RelayEquation
-                                ,updateEquation: updateEquation
-                                ,update: update
-                                ,viewEquation: viewEquation
-                                ,view: view
-                                ,noEffect: noEffect
                                 ,app: app
                                 ,main: main};
 };

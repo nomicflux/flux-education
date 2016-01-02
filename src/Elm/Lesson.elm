@@ -8,7 +8,7 @@ import Html.Attributes
 import StartApp
 import Signal
 import Effects exposing (Effects, Never)
-import Task
+import Task exposing (Task)
 --import Debug
 
 -- Model
@@ -17,23 +17,31 @@ type alias EQID = Int
 
 type alias Lesson =
                  { equations : List (EQID, EQState)
-		 }
+                 , completed : Bool
+                 }
 
 init : List (List String) -> List Color -> VisualType -> Lesson
 init eqStrs colors visType =
-	{
-          equations = List.indexedMap (\ i eq ->
-                                         (i
-                                         , Equation.init
-                                                   colors
-                                                   visType
-                                          eq))
-                      equations
-	}
+  { equations = List.indexedMap (\ i eq ->
+                                   (i
+                                   , Equation.init
+                                             colors
+                                             visType
+                                             eq))
+                                eqStrs
+  , completed = False
+  }
 
 -- Update
 
 type Action = RelayEquation EQID EQAction
+            | SendCompletion
+
+port signalCompletion : Signal Bool
+port signalCompletion = completedMailbox.signal
+
+completedMailbox : Signal.Mailbox Bool
+completedMailbox = Signal.mailbox False
 
 updateEquation : EQID -> EQAction -> (EQID, EQState) -> ((EQID, EQState), Effects Action)
 updateEquation wantedId action (currId, eqstate) =
@@ -52,13 +60,23 @@ update action model =
     --_ = (action, model) |> Debug.log "Updating Lesson1"
   -- in
     case action of
+      SendCompletion ->
+        ( { model | completed = True }, Effects.none )
       RelayEquation i act ->
         let
           eqEffs = List.map (updateEquation i act) model.equations
           newEqs = List.map fst eqEffs
           effs   = List.map snd eqEffs
+          completionAction = 
+            if List.all (\ eq -> Equation.equationCompleted (snd eq)) model.equations
+            then
+              Signal.send completedMailbox.address True
+                  |> Task.map (always SendCompletion)
+                  |> Effects.task
+            else
+              Effects.none
         in
-          ({model | equations = newEqs}, Effects.batch effs)
+          ({model | equations = newEqs}, Effects.batch (completionAction :: effs))
 
 -- View
 
@@ -89,11 +107,9 @@ app eqStrs colors visType =
                  , inputs = []
                  }
 
-startLesson : List (List String) -> List Color -> VisualType -> StartApp.App
+startLesson : List (List String) -> List Color -> VisualType -> StartApp.App Lesson
 startLesson = app
 
-port tasks : Signal (Task.Task Never ())
-port tasks = app.tasks
 
 -- main : Signal Html
 -- main = app.html

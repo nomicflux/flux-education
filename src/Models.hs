@@ -23,7 +23,7 @@ import           Database.Persist.TH         (mkMigrate, mkPersist,
                                               sqlSettings)
 import           GHC.Generics                (Generic)
 
-oimport           Config
+import           Config
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Lesson json

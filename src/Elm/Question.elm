@@ -45,6 +45,9 @@ mkQuestion sys =
     --, id = qid + 1
     }
 
+questionCompleted : QState -> Bool
+questionCompleted state = List.all (\ b -> b.completed == Just True) state.boxes
+
 -- Update
 
 type QAction = UpdateBox System BoxID (Maybe Int)
