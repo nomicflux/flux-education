@@ -1,6 +1,6 @@
 # Flux Education
 
-Site currently located at: [http://52.24.103.159:8081/page/1](http://52.24.103.159:8081/page/1)
+Site currently located at: [http://52.24.103.159:8081/](http://52.24.103.159:8081/)
 
 ## Design Philosophy
 1. Complex ideas can always be broken down into simple notions. I shouldn't have a lesson that I can't explain in a simple sentence.
