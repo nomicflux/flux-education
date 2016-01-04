@@ -6,10 +6,40 @@ function goBack() {
 }
 
 function startApp(module) {
-  var elmApp = document.getElementById("elmApp");
-  var elmObj = Elm[module];
-  var app = Elm.embed(elmObj, elmApp);
-  app.ports.signalCompletion.subscribe(switchCompletionDivs);
+    var elmApp = document.getElementById("elmApp");
+    var elmObj = Elm["Lesson"]; // Elm[module];
+    var app = Elm.embed(elmObj, elmApp, {sendLesson: null});
+
+    var equations = [
+        ["2 + 3 = x"],
+        ["5 + 7 = x"],
+        ["2 + 40 = x"],
+        ["2 - 1 = x",
+         "x + 3 = y",
+         "y - x = z"]
+        ]
+
+    var colors = [
+        [0, 1, 0.5, 0.7],
+        [120, 1, 0.5, 0.7],
+        [240, 1, 0.5, 0.7]
+    ];
+
+    var lesson = {
+        equations: equations,
+        colors: colors,
+        visual: "NumberLine"
+    };
+
+    app.ports.sendLesson.send(
+            {
+                equations: equations,
+                mcolors: null,
+                visual: "NumberLine"
+            }
+        );
+
+    app.ports.signalCompletion.subscribe(switchCompletionDivs);
 }
 
 function lessonToEl(lesson) {

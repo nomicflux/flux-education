@@ -114,7 +114,7 @@ cleanList ml =
 genSystem : List String -> System
 genSystem strs =
   let
-    eqs = List.map stringToEquation strs |> cleanList |> List.reverse
+    eqs = List.map stringToEquation strs |> cleanList
     vars = List.foldl (\eq acc -> eqGetVars eq |> Set.union acc) Set.empty eqs |> Set.toList
     mkInput n = stringToEquation ("?" ++ n)
   in
@@ -203,6 +203,41 @@ getInputVals sys =
     [] -> []
     (Equation _ :: xs) -> getInputVals xs
     (Input i :: xs) -> (i.input.name, i.input.currentValue) :: getInputVals xs
+
+formulaToTerms : Formula -> List Term
+formulaToTerms form =
+  case form of
+    SimpleT term -> [term]
+    TreeT form1 _ form2 -> formulaToTerms form1 ++ formulaToTerms form2
+
+equationToTerms : Equation -> List Term
+equationToTerms eq =
+  case eq of
+    Equation e -> formulaToTerms e.lhs ++ formulaToTerms e.rhs
+    Input i -> []
+
+termPresent : Term -> List Term -> Bool
+termPresent term lst =
+  case term of
+    Constant _ -> False
+    Variable v ->
+      case lst of
+        [] -> False
+        (x :: xs) ->
+          case x of
+            Constant _ -> termPresent term xs
+            Variable v2 -> if v.name == v2.name then True else termPresent term xs
+
+systemToDistinctTerms : System -> List Term
+systemToDistinctTerms sys =
+  let
+    terms = List.concatMap equationToTerms sys
+    gather x acc = if termPresent x acc then acc else x :: acc
+  in
+    List.foldl gather [] terms
+
+systemDistinctParts : System -> Int
+systemDistinctParts = systemToDistinctTerms >> List.length
 
 checkBoxes : List (VarName, Maybe Int) -> System -> List (Maybe Bool, VarBox)
 checkBoxes vals sys = case sys of

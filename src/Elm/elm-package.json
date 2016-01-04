@@ -13,6 +13,7 @@
         "elm-lang/core": "3.0.0 <= v < 4.0.0",
         "evancz/elm-effects": "2.0.0 <= v < 4.0.0",
         "evancz/elm-html": "3.0.0 <= v < 5.0.0",
+        "evancz/elm-http": "3.0.0 <= v < 4.0.0",
         "evancz/start-app": "2.0.0 <= v < 4.0.0",
         "mgold/elm-animation": "1.0.3 <= v < 2.0.0"
     },

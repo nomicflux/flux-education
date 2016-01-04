@@ -14352,13 +14352,47 @@ Elm.Lesson.make = function (_elm) {
                        ,_0: {ctor: "_Tuple2",_0: _p3,_1: _p4}
                        ,_1: $Effects.none};
    });
+   var view = F2(function (address,model) {
+      var eqsToShow = A2($List.take,
+      model.numberShowing,
+      model.equations);
+      return A2($Html.div,
+      _U.list([$Html$Attributes.$class("all-equations")]),
+      A2($List.map,
+      function (_p5) {
+         var _p6 = _p5;
+         return A2(viewEquation,
+         A2($Signal.forwardTo,address,RelayEquation(_p6._0)),
+         _p6._1);
+      },
+      eqsToShow));
+   });
+   var equationsToShow = function (state) {
+      return function (n) {
+         return n + 1;
+      }(A2($Maybe.withDefault,
+      0,
+      A2($Maybe.map,
+      $Basics.fst,
+      A2($Debug.log,
+      "Head",
+      $List.head(A2($Debug.log,
+      "Filtered",
+      A2($List.filter,
+      function (eq) {
+         return $Basics.not($Equation.equationCompleted($Basics.snd(eq)));
+      },
+      state.equations)))))));
+   };
    var update = F2(function (action,model) {
-      var _p5 = action;
-      if (_p5.ctor === "SendCompletion") {
+      var _p7 = action;
+      if (_p7.ctor === "SendCompletion") {
             return {ctor: "_Tuple2"
-                   ,_0: _U.update(model,{completed: true})
+                   ,_0: _U.update(model,
+                   {completed: true,numberShowing: $List.length(model.equations)})
                    ,_1: $Effects.none};
          } else {
+            var numberShowing = equationsToShow(model);
             var completionAction = A2($List.all,
             function (eq) {
                return $Equation.equationCompleted($Basics.snd(eq));
@@ -14369,26 +14403,17 @@ Elm.Lesson.make = function (_elm) {
             completedMailbox.address,
             true))) : $Effects.none;
             var eqEffs = A2($List.map,
-            A2(updateEquation,_p5._0,_p5._1),
+            A2(updateEquation,_p7._0,_p7._1),
             model.equations);
             var newEqs = A2($List.map,$Basics.fst,eqEffs);
             var effs = A2($List.map,$Basics.snd,eqEffs);
             return {ctor: "_Tuple2"
-                   ,_0: _U.update(model,{equations: newEqs})
-                   ,_1: $Effects.batch(A2($List._op["::"],completionAction,effs))};
+                   ,_0: _U.update(model,
+                   {equations: newEqs,numberShowing: numberShowing})
+                   ,_1: $Effects.batch(A2($Basics._op["++"],
+                   effs,
+                   _U.list([completionAction])))};
          }
-   });
-   var view = F2(function (address,model) {
-      return A2($Html.div,
-      _U.list([$Html$Attributes.$class("all-equations")]),
-      A2($List.map,
-      function (_p6) {
-         var _p7 = _p6;
-         return A2(viewEquation,
-         A2($Signal.forwardTo,address,RelayEquation(_p7._0)),
-         _p7._1);
-      },
-      model.equations));
    });
    var init = F3(function (eqStrs,colors,visType) {
       return {equations: A2($List.indexedMap,
@@ -14398,6 +14423,7 @@ Elm.Lesson.make = function (_elm) {
                        ,_1: A3($Equation.init,colors,visType,eq)};
              }),
              eqStrs)
+             ,numberShowing: 1
              ,completed: false};
    });
    var app = F3(function (eqStrs,colors,visType) {
@@ -14409,12 +14435,13 @@ Elm.Lesson.make = function (_elm) {
                              ,inputs: _U.list([])});
    });
    var startLesson = app;
-   var Lesson = F2(function (a,b) {
-      return {equations: a,completed: b};
+   var Lesson = F3(function (a,b,c) {
+      return {equations: a,numberShowing: b,completed: c};
    });
    return _elm.Lesson.values = {_op: _op
                                ,Lesson: Lesson
                                ,init: init
+                               ,equationsToShow: equationsToShow
                                ,RelayEquation: RelayEquation
                                ,SendCompletion: SendCompletion
                                ,completedMailbox: completedMailbox

@@ -8,13 +8,19 @@ import Terms exposing (..)
 import Effects exposing (Effects)
 import Color exposing (Color)
 import Maybe exposing (withDefault)
+import String exposing (toLower)
 import Signal
---import Debug
 
 -- Model
 
 type VisualType = NumberLine
                 | NoVisual
+
+stringToVisualType : String -> VisualType
+stringToVisualType str =
+  case toLower str of
+    "numberline" -> NumberLine
+    _ -> NoVisual
 
 type Visual = NLVisual NLState
 
@@ -33,10 +39,20 @@ loadVisual vis sys colors =
   in
     loadFunc sys
 
-init : List Color -> VisualType -> List String -> EQState
-init colors vis sysStr =
+defaultColors : Int -> List Color
+defaultColors n = [0..n]
+                |> List.map (\ x -> (toFloat x) / (toFloat n) * 360)
+                |> List.map (\ h -> Color.hsla (degrees h) 0.7 0.5 1)
+
+colorsForSystem : System -> List Color
+colorsForSystem =
+  Terms.systemDistinctParts >> defaultColors
+
+init : Maybe (List Color) -> VisualType -> List String -> EQState
+init mcolors vis sysStr =
   let
     sys = genSystem sysStr -- (List.map Terms.stringToSystem sysStr)
+    colors = (Maybe.withDefault (colorsForSystem sys) mcolors)
   in
     { system = sys
     , question = Question.mkQuestion sys
@@ -87,9 +103,6 @@ applyToBoth (f,g) (a,b) = (f a, g b)
 
 update : EQState -> EQAction -> (EQState, Effects EQAction)
 update state action =
-  -- let
-    --_ = (state, action) |> Debug.log "Updating Equations Redux"
-  -- in
     case action of
       -- UpdateValue name mval ->
       --   let

@@ -1,7 +1,7 @@
 module NumberLine where
 
 --import StartApp.Simple
-import Graphics.Collage exposing (collage, Form, moveX, moveY, rect, filled)
+import Graphics.Collage exposing (collage, Form, moveX, moveY, rect, filled, group)
 import Graphics.Element exposing (Element)
 import Color exposing (Color, black)
 import Easing exposing (Easing, easeOutElastic)
@@ -14,7 +14,6 @@ import Html exposing (Html)
 import Html.Attributes
 import Dict exposing (Dict)
 import Terms exposing (Term(..), VarName, Formula(..), Equation(..), System, Operation(..))
---import Debug
 
 -- Model
 
@@ -22,6 +21,7 @@ type alias NumberLineInfo =
   { start : Float
   , size : Float
   , color  : Color
+  , attributes : List Attribute
   }
 
 type alias Dimensions =
@@ -32,7 +32,7 @@ type alias Dimensions =
 type alias AnimationState = Maybe {prevTime : Time, elapsedTime: Time}
 
 type alias ColoredTerm =
-                       { term : Term 
+                       { term : Term
                        , color : Color
                        , negated : Bool
                        }
@@ -80,19 +80,28 @@ getPrevValue ct =
       in
         if ct.negated then (-1)*base else base
 
+hasChanged : ColoredTerm -> Bool
+hasChanged cterm =
+  getValue cterm /= getPrevValue cterm
+
 setValue : ColoredTerm -> Maybe Int -> ColoredTerm
 setValue cterm newVal =
   case cterm.term of
     Constant _ -> cterm
     Variable v -> {cterm | term = Variable { v | value = newVal, prevValue = v.value}}
 
+updatePrevValue : ColoredTerm -> ColoredTerm
+updatePrevValue cterm =
+  case cterm.term of
+    Constant _ -> cterm
+    Variable v -> {cterm | term = Variable { v | prevValue = v.value }}
 
 lookupColor : Term -> ColorRecord -> (Maybe Color, ColorRecord)
 lookupColor term colorRec =
   let
     (nextColor, rstColors) = case colorRec.colors of
                                [] -> (Nothing, [])
-                               (x :: xs) -> (Just x, xs) 
+                               (x :: xs) -> (Just x, xs)
   in
     case term of
       Constant k -> (nextColor, { colorRec | colors = rstColors})
@@ -161,7 +170,8 @@ colorSystem sys colors =
 init : List Color -> System -> NLState
 init colors sys =
   let
-    vals = colorSystem sys (colors ++ defaultColors)
+    revSys = List.reverse sys
+    vals = colorSystem revSys (colors ++ defaultColors)
   in
     { values = vals
     , collageSize = defaultDims
@@ -190,7 +200,7 @@ updateVar (name, mval) oldTerm =
           then
             setValue oldTerm mval
           else
-            oldTerm
+            updatePrevValue oldTerm
 
 duration : Time
 duration = 1 * second
@@ -222,6 +232,16 @@ update state action =
 
 -- View
 
+type Attribute = Negated
+
+termToAttr : ColoredTerm -> List Attribute
+termToAttr cterm =
+  if cterm.negated
+  then
+    [ Negated ]
+  else
+    [ ]
+
 numberToBar : Time -> ColoredTerm -> NumberLineInfo
 numberToBar t cterm =
   case cterm.term of
@@ -229,11 +249,18 @@ numberToBar t cterm =
       { start = 0
       , size = toFloat (getValue cterm)
       , color = cterm.color
+      , attributes = termToAttr cterm
       }
-    Variable _ ->
+    Variable v ->
       { start = 0
-      , size = animate t (moveBar (toFloat (getPrevValue cterm)) (toFloat (getValue cterm)))
+      , size =
+        if hasChanged cterm
+        then
+          animate t (moveBar (toFloat (getPrevValue cterm)) (toFloat (getValue cterm)))
+        else
+          toFloat (getValue cterm)
       , color = cterm.color
+      , attributes = termToAttr cterm
       }
 
 addBars : NumberLineInfo -> NumberLineInfo -> NumberLineInfo
@@ -241,19 +268,27 @@ addBars x y =
   { start = y.start + y.size + x.start
   , size = x.size
   , color = x.color
+  , attributes = x.attributes
   }
 
 scanBars : List NumberLineInfo -> List NumberLineInfo
-scanBars bars = List.scanl addBars { start = 0, size = 0, color = black } bars
+scanBars bars = List.scanl addBars { start = 0, size = 0, color = black, attributes = [ ] } bars
 
 numberBarToRect : Float -> Float -> NumberLineInfo -> Form
 numberBarToRect scale height nl =
   let
     width = nl.size*scale
+    neg = List.member Negated nl.attributes
+    mainRect = rect width (height - (if neg then 4 else 0))
+             |> filled nl.color
+    negRect = rect width 2
+              |> filled Color.charcoal
   in
-    rect width height
-      |> filled nl.color
-      |> moveX (nl.start*scale + width/2)
+    (if neg
+    then
+      group [ mainRect, negRect ]
+    else
+      mainRect) |> moveX (nl.start*scale + width/2)
 
 makeFullBar : Float -> Dimensions -> Int -> List NumberLineInfo -> List Form
 makeFullBar scale dims ypos bars =
@@ -262,7 +297,7 @@ makeFullBar scale dims ypos bars =
     rectIt = numberBarToRect scale (toFloat dims.height)
   in
     List.map (rectIt
-              >> moveY ((toFloat ((ypos - 1)*dims.height*(-1))) + (toFloat dims.height) / 2)
+              >> moveY ((toFloat ((ypos - 1)*dims.height*(-1))) + (toFloat dims.height))
              ) positionBars
 
 barCollage : NLState -> Element
@@ -282,7 +317,7 @@ barCollage {values, collageSize, animationState} =
     scale = (toFloat collageSize.width) / ((toFloat xMax) * 2)
     setsOfBars = List.map (List.map (numberToBar timePassed)) values
   in
-    collage collageSize.width (numRows*collageSize.height*2)
+    collage collageSize.width ((numRows + 1)*collageSize.height)
               (List.concat
                (List.indexedMap (makeFullBar scale collageSize) setsOfBars))
 
@@ -291,16 +326,5 @@ view address state =
  Html.div
         [ Html.Attributes.class "bars" ]
         [ (barCollage state)
---                      (List.map (List.map (\ (t, c) -> (termToInt t, c))) state.values))
           |> Html.fromElement
         ]
-
--- App
-
--- main = StartApp.Simple.start
---        { model = { values = []
---                  , dimensions = { height = 0, width = 0 }
---                  }
---        , update = update
---        , view = view
---        }

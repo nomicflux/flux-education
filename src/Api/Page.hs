@@ -24,10 +24,11 @@ instance ToHtml Page where
   toHtml (Page num les) =
     html_ $ do
       head_ $ do
-        title_ (toHtml $ "Flux")
-        (script_ [src_ (toText $ "/elm/" ++ (lessonJsfile les) ++ ".js")] "")
-        (script_ [src_ (toText $ "/js/jquery.min.js")] "")
-        (script_ [src_ (toText $ "/js/common.js")] "")
+        title_ (toHtml "Flux")
+        --(script_ [src_ (toText $ "/elm/" ++ (lessonJsfile les) ++ ".js")] "")
+        (script_ [src_ (toText "/elm/lesson.js")] "")
+        (script_ [src_ (toText "/js/jquery.min.js")] "")
+        (script_ [src_ (toText "/js/common.js")] "")
         link_ [href_ $ toText "/css/bootstrap.css", type_ $ toText "text/css", rel_ $ toText "stylesheet"]
         link_ [href_ $ toText "/css/lessons.css", type_ $ toText "text/css", rel_ $ toText "stylesheet"]
         link_ [href_ $ toText "https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css", rel_ $ toText "stylesheet"]
@@ -40,7 +41,8 @@ instance ToHtml Page where
 --          (with span_ [class_ $ toText "is-completed", style_ $ toText "display: none"] "Completed.")
 --          (with span_ [class_ $ toText "is-not-completed"] "Not Completed.")
         (script_ []
-         ("$(function() { startApp('"++(capitalize $ lessonJsfile les)++"');loadNextFiles("++(show num)++"); });")
+         -- ("$(function() { startApp('"++ capitalize $ lessonJsfile les ++"');loadNextFiles("++ show num ++"); });")
+         ("$(function() { startApp();loadNextFiles("++ show num ++"); });")
           )
   toHtmlRaw = toHtml
 
