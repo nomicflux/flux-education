@@ -36,9 +36,9 @@ SET default_with_oids = false;
 CREATE TABLE lesson (
     id integer NOT NULL,
     keyphrase character varying NOT NULL,
-    jsfile character varying NOT NULL,
     title character varying NOT NULL,
-    goon character varying NOT NULL
+    goon character varying NOT NULL,
+    equations character varying NOT NULL
 );
 
 
@@ -199,13 +199,13 @@ ALTER TABLE ONLY "user" ALTER COLUMN id SET DEFAULT nextval('user_id_seq'::regcl
 -- Data for Name: lesson; Type: TABLE DATA; Schema: public; Owner: flux
 --
 
-COPY lesson (id, keyphrase, jsfile, title, goon) FROM stdin;
-1	Addition is a way of combining things.	lesson1	Addition as Combination	Why are you reading this?
-3	Sometimes we have the answer and need the question.	lesson3	Variable in the Middle	This is boring. What else can we do?
-4	Some questions can be answered together.	lesson4	Multiple Equations	Can we reuse that X?
-5	Some questions must be answered together.	lesson5	Multiple Variables	What happens if we add a Y?
-2	An X doesn't change anything.	lesson2	Adding a variable	How else can we write a blank?
-6	Addition run backwards is subtraction.	lesson6	Subtraction as Inverse	Can we run that in reverse?
+COPY lesson (id, keyphrase, title, goon, equations) FROM stdin;
+1	X marks the result, nothing more.	Addition as Combination	Why are you reading this?	2+3=x,5+7=x,2+40=x
+2	A different letter doesn't change anything.	Adding a variable	But why an X?	2+3=y,5+7=q,2+40=bob
+3	Sometimes we have the answer and need the question.	Variable in the Middle	This is boring. What else can we do?	2+x=5,5+x=12,y+40=42
+4	Some questions can be answered together.	Multiple Equations	Can we reuse that X?	2+3=x;x+4=9,5+x=12;x+9=16,y+40=42;y+2=4
+6	Addition run backwards is subtraction.	Subtraction as Inverse	Can we run that in reverse?	2+x=5;x=5-2,5+x=12;x=12-5,y+40=42;y=42-40}
+5	Some questions must be answered together.	Multiple Variables	What happens if we add another letter?	2+3=x;x+y=9,5+x=12;x+9=y,q+40=42;q+r=s;s+10=14
 \.
 
 
@@ -345,12 +345,12 @@ ALTER TABLE ONLY lesson_prereqs
 
 
 --
--- Name: public; Type: ACL; Schema: -; Owner: postgres
+-- Name: public; Type: ACL; Schema: -; Owner: pgsql
 --
 
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM postgres;
-GRANT ALL ON SCHEMA public TO postgres;
+REVOKE ALL ON SCHEMA public FROM pgsql;
+GRANT ALL ON SCHEMA public TO pgsql;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
