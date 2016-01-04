@@ -42,10 +42,10 @@ allLessons = do
 
 singleLesson :: Int64 -> AppM Lesson
 singleLesson key = do
-  mlesson <- runDb $ selectList [LessonId ==. (toSqlKey key)] []
+  mlesson <- runDb $ selectList [LessonId ==. toSqlKey key] []
   case mlesson of
    [] -> lift $ left err404
-   ((Entity _ x):xs) -> return x
+   (Entity _ x:xs) -> return x
 
 requiresLessons :: Int64 -> AppM [(Int64, Lesson)]
 requiresLessons key = do
@@ -66,8 +66,7 @@ requiredByLessons key = do
                E.where_ (lessonPrereqs ^. LessonPrereqsLessonRequired E.==. E.val (toSqlKey key))
                E.on $ lessonPrereqs ^. LessonPrereqsLessonFor E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
-  return justLessons
+  return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
 
 completedLessons :: Int64 -> AppM [(Int64, Lesson)]
 completedLessons key = do
@@ -77,8 +76,7 @@ completedLessons key = do
                E.where_ $ lessonCompleted ^. LessonCompletedUser E.==. E.val (toSqlKey key)
                E.on $ lessonCompleted ^. LessonCompletedLesson E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
-  return justLessons
+  return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
 
 createLesson :: Lesson -> AppM Int64
 createLesson lesson = do

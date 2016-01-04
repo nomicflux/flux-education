@@ -28,9 +28,9 @@ import           Config
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Lesson json
   keyphrase String
-  jsfile String
   title String
   goon String
+  equations String
   deriving Eq Show Generic
 LessonPrereqs json
   lessonFor LessonId

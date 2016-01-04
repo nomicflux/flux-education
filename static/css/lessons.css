@@ -89,3 +89,17 @@ span .term {
 span .operation {
     display: inline;
 }
+
+nav {
+    width: 100%;
+    border-bottom: 2px grooved black;
+}
+nav h3 {
+    display: inline;
+}
+nav ul {
+    display: inline;
+}
+nav ul li {
+    display: inline;
+}

@@ -44,9 +44,26 @@ defaultColors n = [0..n]
                 |> List.map (\ x -> (toFloat x) / (toFloat n) * 360)
                 |> List.map (\ h -> Color.hsla (degrees h) 0.7 0.5 1)
 
+zipWith : (a -> b -> c) -> List a -> List b -> List c
+zipWith f lsta lstb =
+  case (lsta, lstb) of
+    ([], _) -> []
+    (_, []) -> []
+    ((x::xs), (y::ys)) -> f x y :: zipWith f xs ys
+
+interweave : List a -> List a
+interweave lst =
+  let
+    n = List.length lst
+    lst1 = List.take (n // 2) lst
+    lst2 = List.drop (n // 2) lst
+  in
+    List.concat (zipWith (\ a b -> [a,b]) lst1 lst2)
+
 colorsForSystem : System -> List Color
-colorsForSystem =
-  Terms.systemDistinctParts >> defaultColors
+colorsForSystem sys =
+  Terms.systemDistinctParts sys |> defaultColors |> interweave
+
 
 init : Maybe (List Color) -> VisualType -> List String -> EQState
 init mcolors vis sysStr =
