@@ -1,33 +1,36 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE EmptyDataDecls             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE RecordWildCards            #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module Models where
 
-import Data.Aeson (ToJSON, FromJSON)
-import GHC.Generics (Generic)
-import Control.Monad.Reader (ReaderT, asks, liftIO)
-import Database.Persist.Postgresql (SqlBackend(..), runMigration, runSqlPool)
-import Database.Persist.TH (share, mkPersist, sqlSettings, mkMigrate, persistLowerCase)
-import Data.Int (Int64)
+import           Control.Monad.Reader        (ReaderT, asks, liftIO)
+import           Data.Aeson                  (FromJSON, ToJSON)
+import           Data.Int                    (Int64)
+import           Database.Persist.Postgresql (SqlBackend (..), runMigration,
+                                              runSqlPool)
+import           Database.Persist.TH         (mkMigrate, mkPersist,
+                                              persistLowerCase, share,
+                                              sqlSettings)
+import           GHC.Generics                (Generic)
 
-import Config
+import           Config
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Lesson json
   keyphrase String
-  jsfile String
   title String
   goon String
+  equations String
   deriving Eq Show Generic
 LessonPrereqs json
   lessonFor LessonId

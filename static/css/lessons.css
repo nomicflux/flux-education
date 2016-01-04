@@ -16,10 +16,6 @@ div.keyphrase {
 div.question {
     display: block;
     padding: 10px;
-}
-
-div.question span {
-    display: block;
     text-align: left;
 }
 
@@ -80,4 +76,30 @@ input.new-question {
     border: 1px solid rbga(0,0,80,0.8);
     border-radius: 3px;
     box-shadow: 0 0 6px rgba(0, 0, 80, 0.8);
+}
+
+span .formula {
+    display: inline;
+}
+
+span .term {
+    display: inline;
+}
+
+span .operation {
+    display: inline;
+}
+
+nav {
+    width: 100%;
+    border-bottom: 2px grooved black;
+}
+nav h3 {
+    display: inline;
+}
+nav ul {
+    display: inline;
+}
+nav ul li {
+    display: inline;
 }

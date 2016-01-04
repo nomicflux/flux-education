@@ -1,18 +1,19 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Api.Lesson where
 
-import Control.Monad.Reader (ReaderT, runReaderT, lift)
-import Control.Monad.Trans.Either (EitherT, left)
-import qualified Database.Esqueleto as E
-import           Database.Esqueleto ((^.))
-import Database.Persist.Postgresql (selectList, Entity(..), (==.), fromSqlKey, toSqlKey, insert)
-import Data.Int (Int64)
-import Servant
+import           Control.Monad.Reader        (ReaderT, lift, runReaderT)
+import           Control.Monad.Trans.Either  (EitherT, left)
+import           Data.Int                    (Int64)
+import           Database.Esqueleto          ((^.))
+import qualified Database.Esqueleto          as E
+import           Database.Persist.Postgresql (Entity (..), fromSqlKey, insert,
+                                              selectList, toSqlKey, (==.))
+import           Servant
 
-import Models
-import Api.App
+import           Api.App
+import           Models
 
 lessonAPI :: Proxy LessonAPI
 lessonAPI = Proxy
@@ -41,10 +42,10 @@ allLessons = do
 
 singleLesson :: Int64 -> AppM Lesson
 singleLesson key = do
-  mlesson <- runDb $ selectList [LessonId ==. (toSqlKey key)] []
+  mlesson <- runDb $ selectList [LessonId ==. toSqlKey key] []
   case mlesson of
    [] -> lift $ left err404
-   ((Entity _ x):xs) -> return x
+   (Entity _ x:xs) -> return x
 
 requiresLessons :: Int64 -> AppM [(Int64, Lesson)]
 requiresLessons key = do
@@ -65,8 +66,7 @@ requiredByLessons key = do
                E.where_ (lessonPrereqs ^. LessonPrereqsLessonRequired E.==. E.val (toSqlKey key))
                E.on $ lessonPrereqs ^. LessonPrereqsLessonFor E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
-  return justLessons
+  return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
 
 completedLessons :: Int64 -> AppM [(Int64, Lesson)]
 completedLessons key = do
@@ -76,8 +76,7 @@ completedLessons key = do
                E.where_ $ lessonCompleted ^. LessonCompletedUser E.==. E.val (toSqlKey key)
                E.on $ lessonCompleted ^. LessonCompletedLesson E.==. lesson ^. LessonId
                return lesson
-  justLessons <- return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
-  return justLessons
+  return $ map (\(Entity lid l) -> (fromSqlKey lid, l)) lessons
 
 createLesson :: Lesson -> AppM Int64
 createLesson lesson = do
