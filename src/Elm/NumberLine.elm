@@ -104,7 +104,13 @@ lookupColor term colorRec =
                                (x :: xs) -> (Just x, xs)
   in
     case term of
-      Constant k -> (nextColor, { colorRec | colors = rstColors})
+      Constant k -> case Dict.get (toString k) colorRec.assigned of
+                       Nothing -> (nextColor
+                                  , {colorRec | colors = rstColors
+                                    , assigned = Dict.insert (toString k)
+                                                 (withDefault Color.white nextColor)
+                                                 colorRec.assigned})
+                       Just col-> (Just col, colorRec)
       Variable x -> case Dict.get x.name colorRec.assigned of
                       Nothing -> (nextColor
                                  , {colorRec | colors = rstColors

@@ -51,19 +51,27 @@ zipWith f lsta lstb =
     (_, []) -> []
     ((x::xs), (y::ys)) -> f x y :: zipWith f xs ys
 
+separateList : List a -> (List a, List a)
+separateList lst =
+  case lst of
+    [] -> ([], [])
+    (x::[]) -> ([x], [])
+    (x::y::rst) ->
+      let
+        (l,r) = separateList rst
+      in
+        (x::l, y::r)
+
 interweave : List a -> List a
 interweave lst =
   let
-    n = List.length lst
-    lst1 = List.take (n // 2) lst
-    lst2 = List.drop (n // 2) lst
+    (lst1, lst2) = separateList lst
   in
-    List.concat (zipWith (\ a b -> [a,b]) lst1 lst2)
+    lst1 ++ lst2
 
 colorsForSystem : System -> List Color
 colorsForSystem sys =
   Terms.systemDistinctParts sys |> defaultColors |> interweave
-
 
 init : Maybe (List Color) -> VisualType -> List String -> EQState
 init mcolors vis sysStr =

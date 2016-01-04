@@ -219,7 +219,13 @@ equationToTerms eq =
 termPresent : Term -> List Term -> Bool
 termPresent term lst =
   case term of
-    Constant _ -> False
+    Constant k ->
+      case lst of
+        [] -> False
+        (x::xs) ->
+          case x of
+            Constant k2 -> if k2 == k then True else termPresent term xs
+            Variable _ -> termPresent term xs
     Variable v ->
       case lst of
         [] -> False
