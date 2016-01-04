@@ -17,5 +17,6 @@ cabal.sandbox.config
 .stack-work/
 src/Elm/elm-stuff/
 src/Elm/*.js
+src/Elm/Old-Lessons/
 *~
 *#
